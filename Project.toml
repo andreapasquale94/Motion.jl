@@ -3,6 +3,10 @@ uuid = "0bcdb53c-9385-4d13-8c48-99ad1bbe68c0"
 authors = ["Andrea Pasquale <andrea.pasquale@outlook.it>"]
 version = "0.1.0"
 
+[deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
 [extras]
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

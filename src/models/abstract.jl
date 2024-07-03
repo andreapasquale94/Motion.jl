@@ -11,8 +11,10 @@ struct CR3BPSystemProperties{N <: Number} <: AbstractModelProperties
     L::N         # Length unit 
     T::N         # Time unit
     
-    R1::N        # Radius of central body (normalized)
-    R2::N        # Radius of smaller body (normalized)
+    R1::N        # Radius of central body 
+    R2::N        # Radius of smaller body 
+    GM1::N       # Body 1 GM
+    GM2::N       # Body 2 GM
 end
 
 struct BCR4BPSystemProperties{N <: Number} <: AbstractModelProperties
@@ -29,7 +31,10 @@ struct BCR4BPSystemProperties{N <: Number} <: AbstractModelProperties
     L::N        # Length unit
     T::N        # Time unit 
     
-    R1::N       # Body 1 radius (normalized)
-    R2::N       # Body 2 radius (normalized)
-    R3::N       # Body 3 radius (normalized)
+    R1::N       # Body 1 radius 
+    R2::N       # Body 2 radius 
+    R3::N       # Body 3 radius 
+    GM1::N      # Body 1 GM  
+    GM2::N      # Body 2 GM
+    GM3::N      # Body 3 GM
 end
