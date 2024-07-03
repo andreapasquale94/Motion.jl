@@ -1,0 +1,11 @@
+name = "Motion"
+uuid = "0bcdb53c-9385-4d13-8c48-99ad1bbe68c0"
+authors = ["Andrea Pasquale <andrea.pasquale@outlook.it>"]
+version = "0.1.0"
+
+[extras]
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test", "ForwardDiff"]
