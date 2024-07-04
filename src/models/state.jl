@@ -1,12 +1,5 @@
 
-abstract type AbstractStateN{N, T} <: FieldVector{N, T} end
-
-abstract type AbstractState6{T} <: AbstractStateN{6, T} end
-
 abstract type AbstractAdimState6{T} <: AbstractState6{T} end
-
-# ----
-# Representations 
 
 # This is the CR3BP representation used for the state vector
 # It is non-dimensional units, centered at the barycenter of the three body system
@@ -18,7 +11,6 @@ struct Adim{N} <: AbstractAdimState6{N}
     vey::N 
     vez::N
 end
-
 
 # The following state representations are all inertial 
 # They are centered either at the primary or the secondary
@@ -139,13 +131,14 @@ end
 
 # ----
 # Translation in non-dim units 
+# NOTE: this translate also the velocity 
 
 function translate(c::Adim{N}, p::CR3BPSystemProperties, ::Val{:primary}) where N 
-    return Adim{N}(c.pox+p.μ, c.poy, c.poz, c.vex, c.vey, c.vez)
+    return Adim{N}(c.pox+p.μ, c.poy, c.poz, c.vex-p.μ, c.vey, c.vez)
 end
 
 function translate(c::Adim{N}, p::CR3BPSystemProperties, ::Val{:secondary}) where N 
-    return Adim{N}(c.pox-1+p.μ, c.poy, c.poz, c.vex, c.vey, c.vez)
+    return Adim{N}(c.pox-1+p.μ, c.poy, c.poz, c.vex, c.vey-1+p.μ, c.vez)
 end
 
 # ----
@@ -239,7 +232,7 @@ function transform(
     ::Type{Adim}, s::R, p::CR3BPSystemProperties, val::Val{:primary}, θ::Number=0.0
 ) where {R <: AbstractState6}
     x = rotate(Adim, transform(AdimCart, s, p, val), θ, 1.0)
-    return x - SA[0, 0, 0, 0, -p.μ, 0] # translate velocity to barycenter 
+    return x + SA[0, 0, 0, 0, p.μ, 0] # translate velocity to barycenter 
 end
 
 function transform(

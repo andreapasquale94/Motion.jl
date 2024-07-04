@@ -5,6 +5,10 @@ module Motion
 
     include("utils/root.jl")
 
+    abstract type AbstractStateN{N, T} <: FieldVector{N, T} end
+
+    abstract type AbstractState6{T} <: AbstractStateN{6, T} end
+
     export CR3BPSystemProperties, BCR4BPSystemProperties
     include("models/abstract.jl")
 
