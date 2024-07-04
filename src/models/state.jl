@@ -3,10 +3,22 @@ abstract type AbstractStateN{N, T} <: FieldVector{N, T} end
 
 abstract type AbstractState6{T} <: AbstractStateN{6, T} end
 
+abstract type AbstractAdimState6{T} <: AbstractState6{T} end
+
 # ----
 # Representations 
 
-struct Adim{N} <: AbstractState6{N}
+struct Adim{N} <: AbstractAdimState6{N}
+    pox::N 
+    poy::N 
+    poz::N 
+    vex::N 
+    vey::N 
+    vez::N
+end
+
+# NOTE: the following state representations are all inertial 
+struct AdimCart{N} <: AbstractAdimState6{N}
     pox::N 
     poy::N 
     poz::N 
@@ -124,53 +136,103 @@ end
 # ----
 # CR3BP
 
-function translate_state(c::Adim{N}, p::CR3BPSystemProperties, ::Val{:primary}) where N 
+# Translation in non-dim units 
+
+function translate(c::Adim{N}, p::CR3BPSystemProperties, ::Val{:primary}) where N 
     return Adim{N}(c.pox+p.μ, c.poy, c.poz, c.vex, c.vey, c.vez)
 end
 
-function translate_state(c::Adim{N}, p::CR3BPSystemProperties, ::Val{:secondary}) where N 
+function translate(c::Adim{N}, p::CR3BPSystemProperties, ::Val{:secondary}) where N 
     return Adim{N}(c.pox-1+p.μ, c.poy, c.poz, c.vex, c.vey, c.vez)
 end
 
-function convert_state(::Type{Cart}, c::Adim{N}, p::CR3BPSystemProperties, args...) where N 
+# Simple state rotations (non-dim 2 dim)
+
+function rotate(::Type{Adim}, s::AdimCart{N}, θ::Number, ∂θ::Number=1.0) where N 
+    sθ, cθ = sincos(θ)
+    return Adim{N}(
+        s.pox*cθ + s.poy*sθ,
+        -s.pox*sθ + s.poy*cθ,
+        s.poz,
+        -s.pox*∂θ*sθ + s.poy*∂θ*cθ + s.vex*cθ + s.vey*sθ,
+        -s.pox*∂θ*cθ - s.poy*∂θ*sθ - s.vex*sθ + s.vey*cθ,
+        s.vez
+    )
+end
+
+function rotate(::Type{AdimCart}, s::Adim{N}, θ::Number, ∂θ::Number=1.0) where N 
+    sθ, cθ = sincos(θ)
+    return AdimCart{N}(
+        s.pox*cθ - s.poy*sθ,
+        s.pox*sθ + s.poy*cθ,
+        s.poz,
+        -s.pox*∂θ*sθ - s.poy*∂θ*cθ + s.vex*cθ - s.vey*sθ,
+        s.pox*∂θ*cθ - s.poy*∂θ*sθ + s.vex*sθ + s.vey*cθ,
+        s.vez
+    )
+end
+
+# Transformations between representations 
+
+@inline transform(::Type{A}, s::A, args...) where {A <: AbstractState6} = s
+    
+function transform(::Type{Cart}, s::AdimCart{N}, p::CR3BPSystemProperties, args...) where N 
     lu = p.L
     vu = p.L/p.T
     return Cart{N}(
-        c.pox*lu, c.poy*lu, c.poz*lu, c.vex*vu, c.vey*vu, c.vez*vu
+        s.pox*lu, s.poy*lu, s.poz*lu, s.vex*vu, s.vey*vu, s.vez*vu
     )
 end
 
-function convert_state(::Type{Adim}, c::Cart{N}, p::CR3BPSystemProperties, args...) where N 
+function transform(::Type{AdimCart}, s::Cart{N}, p::CR3BPSystemProperties, args...) where N 
     lu = p.L
     vu = p.L/p.T
     return Adim{N}(
-        c.pox/lu, c.poy/lu, c.poz/lu, c.vex/vu, c.vey/vu, c.vez/vu
+        s.pox/lu, s.poy/lu, s.poz/lu, s.vex/vu, s.vey/vu, s.vez/vu
     )
 end
 
-function convert_state(::Type{Cart}, s::Adim{N}, p::CR3BPSystemProperties, val::Val{S}) where {N, S}
-    return convert_state(Cart, translate_state(s, p, val), p)
+function transform(
+    ::Type{Cart}, s::AdimCart{N}, p::CR3BPSystemProperties, val::Val{S}
+) where {N, S}
+    return transform(Cart, translate(s, p, val), p)
 end
 
-function convert_state(::Type{Coe}, s::Adim{N}, p::CR3BPSystemProperties, ::Val{:primary}) where N 
-    return convert6_cart_to_coe(convert_state(Cart, s, p, val), p.GM1)
+function transform(
+::Type{Coe}, s::AdimCart{N}, p::CR3BPSystemProperties, ::Val{:primary}
+) where N 
+    return convert6_cart_to_coe(transform(Cart, s, p, val), p.GM1)
 end
 
-function convert_state(::Type{Coe}, s::Adim{N}, p::CR3BPSystemProperties, ::Val{:secondary}) where N 
-    return convert6_cart_to_coe(convert_state(Cart, s, p, val), p.GM2)
+function transform(
+    ::Type{Coe}, s::AdimCart{N}, p::CR3BPSystemProperties, ::Val{:secondary}
+) where N 
+    return convert6_cart_to_coe(transform(Cart, s, p, val), p.GM2)
 end
 
-function convert_state(::Type{Adim}, s::Coe{N}, p::CR3BPSystemProperties, ::Val{:primary}) where N 
-    adim = convert_state(Adim, convert_state(Cart, s, p), p)
+function transform(
+    ::Type{AdimCart}, s::Coe{N}, p::CR3BPSystemProperties, ::Val{:primary}
+) where N 
+    adim = transform(Adim, transform(Cart, s, p), p)
     return Adim{N}(adim.pox-p.μ, adim.poy, adim.poz, adim.vex, adim.vey, adim.vez)
 end
 
-function convert_state(::Type{Adim}, s::Coe{N}, p::CR3BPSystemProperties, ::Val{:secondary}) where N 
-    adim = convert_state(Adim, convert_state(Cart, s, p), p)
+function transform(
+    ::Type{AdimCart}, s::Coe{N}, p::CR3BPSystemProperties, ::Val{:secondary}
+) where N 
+    adim = transform(Adim, transform(Cart, s, p), p)
     return Adim{N}(adim.pox+1-p.μ, adim.poy, adim.poz, adim.vex, adim.vey, adim.vez)
 end
 
-function convert_state(::Type{Adim}, s::CoeRad{N}, p::CR3BPSystemProperties, val::Val{S}) where {N, S} 
+function transform(
+    ::Type{AdimCart}, s::CoeRad{N}, p::CR3BPSystemProperties, val::Val{S}
+) where {N, S} 
     coe = convert6_coerad_to_coe(s)
-    return convert_state(Adim, coe, p, val)
+    return transform(Adim, coe, p, val)
+end
+
+function transform(
+    ::Type{Adim}, s::R, p::CR3BPSystemProperties, val::Val{S}, θ::Number=0.0
+) where {S, R <: AbstractState6}
+    return rotate(Adim, transform(AdimCart, s, p, val), θ, 1.0)
 end
