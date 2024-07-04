@@ -74,17 +74,17 @@ end
 
 end
 
-@fastmath function rhs(x, p::CR3BPSystemProperties, t)
+@fastmath function rhs3b(x, p::CR3BPSystemProperties, t)
     μ = p.μ
     return rhs_cr3bp(x, t, μ)
 end
 
-@fastmath function jacobian(x, p::CR3BPSystemProperties, t)
+@fastmath function jacobian3b(x, p::CR3BPSystemProperties, t)
     μ = p.μ
     return jacobian_cr3bp(x, t, μ)
 end
 
-function rhs_stm(x, p::CR3BPSystemProperties, t)
+function rhs_stm3b(x, p::CR3BPSystemProperties, t)
     # State transition matrix
     Φ = reshape(@view(x[7:end]), Size(6, 6))
 

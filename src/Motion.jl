@@ -13,7 +13,7 @@ module Motion
            AdimCart, Cart, Coe, CoeRad # inertial
     include("models/state.jl")
 
-    export rhs, libration_points
+    export rhs3b, rhs_stm3b, libration_points
     include("models/cr3bp.jl")
     include("models/bcr4bp.jl")
     include("models/lagrange.jl")

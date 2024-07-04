@@ -8,6 +8,8 @@ abstract type AbstractAdimState6{T} <: AbstractState6{T} end
 # ----
 # Representations 
 
+# This is the CR3BP representation used for the state vector
+# It is non-dimensional units, centered at the barycenter of the three body system
 struct Adim{N} <: AbstractAdimState6{N}
     pox::N 
     poy::N 
@@ -17,7 +19,9 @@ struct Adim{N} <: AbstractAdimState6{N}
     vez::N
 end
 
-# NOTE: the following state representations are all inertial 
+
+# The following state representations are all inertial 
+# They are centered either at the primary or the secondary
 struct AdimCart{N} <: AbstractAdimState6{N}
     pox::N 
     poy::N 
@@ -134,8 +138,6 @@ end
 end
 
 # ----
-# CR3BP
-
 # Translation in non-dim units 
 
 function translate(c::Adim{N}, p::CR3BPSystemProperties, ::Val{:primary}) where N 
@@ -146,7 +148,8 @@ function translate(c::Adim{N}, p::CR3BPSystemProperties, ::Val{:secondary}) wher
     return Adim{N}(c.pox-1+p.μ, c.poy, c.poz, c.vex, c.vey, c.vez)
 end
 
-# Simple state rotations (non-dim 2 dim)
+# ----
+# Simple state rotations (inertial to synodic)
 
 function rotate(::Type{Adim}, s::AdimCart{N}, θ::Number, ∂θ::Number=1.0) where N 
     sθ, cθ = sincos(θ)
@@ -172,6 +175,7 @@ function rotate(::Type{AdimCart}, s::Adim{N}, θ::Number, ∂θ::Number=1.0) whe
     )
 end
 
+# ----
 # Transformations between representations 
 
 @inline transform(::Type{A}, s::A, args...) where {A <: AbstractState6} = s
@@ -192,47 +196,55 @@ function transform(::Type{AdimCart}, s::Cart{N}, p::CR3BPSystemProperties, args.
     )
 end
 
-function transform(
-    ::Type{Cart}, s::AdimCart{N}, p::CR3BPSystemProperties, val::Val{S}
-) where {N, S}
-    return transform(Cart, translate(s, p, val), p)
-end
+# primary/secondary-centric transformations
 
 function transform(
-::Type{Coe}, s::AdimCart{N}, p::CR3BPSystemProperties, ::Val{:primary}
+    ::Type{Coe}, s::AdimCart{N}, p::CR3BPSystemProperties, ::Val{:primary}
 ) where N 
-    return convert6_cart_to_coe(transform(Cart, s, p, val), p.GM1)
+    dim = transform(Cart, s, p, val)
+    return convert6_cart_to_coe(dim, p.GM1)
 end
 
 function transform(
     ::Type{Coe}, s::AdimCart{N}, p::CR3BPSystemProperties, ::Val{:secondary}
 ) where N 
-    return convert6_cart_to_coe(transform(Cart, s, p, val), p.GM2)
+    dim = transform(Cart, s, p, val)
+    return convert6_cart_to_coe(dim, p.GM2)
 end
 
 function transform(
     ::Type{AdimCart}, s::Coe{N}, p::CR3BPSystemProperties, ::Val{:primary}
 ) where N 
-    adim = transform(Adim, transform(Cart, s, p), p)
-    return Adim{N}(adim.pox-p.μ, adim.poy, adim.poz, adim.vex, adim.vey, adim.vez)
+    cart = convert6_coe_to_cart(s, p.GM1)
+    adim = transform(AdimCart, cart, p)
+    return AdimCart{N}(adim.pox-p.μ, adim.poy, adim.poz, adim.vex, adim.vey, adim.vez)
 end
 
 function transform(
     ::Type{AdimCart}, s::Coe{N}, p::CR3BPSystemProperties, ::Val{:secondary}
 ) where N 
-    adim = transform(Adim, transform(Cart, s, p), p)
-    return Adim{N}(adim.pox+1-p.μ, adim.poy, adim.poz, adim.vex, adim.vey, adim.vez)
+    cart = convert6_coe_to_cart(s, p.GM2)
+    adim = transform(AdimCart, cart, p)
+    return AdimCart{N}(adim.pox+1-p.μ, adim.poy, adim.poz, adim.vex, adim.vey, adim.vez)
 end
 
 function transform(
-    ::Type{AdimCart}, s::CoeRad{N}, p::CR3BPSystemProperties, val::Val{S}
-) where {N, S} 
+    ::Type{AdimCart}, s::CoeRad{N}, p::CR3BPSystemProperties, val
+) where {N} 
     coe = convert6_coerad_to_coe(s)
-    return transform(Adim, coe, p, val)
+    return transform(AdimCart, coe, p, val)
 end
 
 function transform(
-    ::Type{Adim}, s::R, p::CR3BPSystemProperties, val::Val{S}, θ::Number=0.0
-) where {S, R <: AbstractState6}
-    return rotate(Adim, transform(AdimCart, s, p, val), θ, 1.0)
+    ::Type{Adim}, s::R, p::CR3BPSystemProperties, val::Val{:primary}, θ::Number=0.0
+) where {R <: AbstractState6}
+    x = rotate(Adim, transform(AdimCart, s, p, val), θ, 1.0)
+    return x - SA[0, 0, 0, 0, -p.μ, 0] # translate velocity to barycenter 
+end
+
+function transform(
+    ::Type{Adim}, s::R, p::CR3BPSystemProperties, val::Val{:secondary}, θ::Number=0.0
+) where {R <: AbstractState6}
+    x = rotate(Adim, transform(AdimCart, s, p, val), θ, 1.0)
+    return x + SA[0, 0, 0, 0, 1-p.μ, 0] # translate velocity to barycenter
 end

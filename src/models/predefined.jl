@@ -2,9 +2,9 @@
 const SE3B_PROPERTIES = CR3BPSystemProperties{Float64}(
     :Sun,
     :EarthBarycenter,
-    3.0404234047636514e-6,
-    1.495978706137e+8, # km 
-    5.02263525109303e+6, # s, 58.1323 days
+    3.0404234047636514e-06,
+    1.495978706137e+08, # km 
+    5.02263525109303e+06, # s, 58.1323 days
 
     695700.0000, # km
     6380.0000,   # km (rounded Earth radius)
@@ -15,9 +15,9 @@ const SE3B_PROPERTIES = CR3BPSystemProperties{Float64}(
 const EM3B_PROPERTIES = CR3BPSystemProperties{Float64}(
     :Earth,
     :Moon,
-    1.2004720031932892e-2,
+    1.2004720031932892e-02,
     384405.0000, # km 
-    3.729387115155678e5, # s, 4.3164 days
+    3.729387115155678e+05, # s, 4.3164 days
     
     6378.1366,   # km 
     1737.4000, # km
