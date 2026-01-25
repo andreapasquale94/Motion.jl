@@ -1,8 +1,7 @@
 using Documenter
 using Motion
 
-# include("generate.jl")
-const GENERATED_FILES = String[]
+include("generate.jl")
 
 const CI = get(ENV, "CI", "false") == "true"
 
