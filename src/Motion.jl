@@ -1,28 +1,34 @@
 module Motion
 
-    using StaticArrays
-    using LinearAlgebra 
+using StaticArrays
+using LinearAlgebra
+using ComponentArrays
 
-    include("utils/root.jl")
+using SciMLBase: ODEProblem, ContinuousCallback, remake, solve
+using SciMLBase: EnsembleProblem, EnsembleThreads
 
-    abstract type AbstractStateN{N, T} <: FieldVector{N, T} end
+include("root.jl")
 
-    abstract type AbstractState6{T} <: AbstractStateN{6, T} end
+export libration_points
+include("model/libration_points.jl")
 
-    export CR3BPSystemProperties, BCR4BPSystemProperties
-    include("models/abstract.jl")
+export Solution, SensitivitySolution, BatchSolution
+include("model/solution.jl")
 
-    export translate, rotate, transform, 
-           Adim,  # synodic 
-           AdimCart, Cart, Coe, CoeRad # inertial
-    include("models/state.jl")
+export compute_stretch
+include("model/measures.jl")
 
-    export rhs3b, rhs_stm3b, libration_points
-    include("models/cr3bp.jl")
-    include("models/bcr4bp.jl")
-    include("models/lagrange.jl")
+include("model/utils.jl")
 
-    export EM3B_PROPERTIES, SE3B_PROPERTIES
-    include("models/predefined.jl")
+export make_cr3bp, flow_cr3bp, solve_cr3bp
+include("model/cr3bp/utils.jl")
+include("model/cr3bp/base.jl")
+include("model/cr3bp/batch.jl")
+
+export make_cr3bp_constant_thrust, flow_cr3bp_constant_thrust, solve_cr3bp_constant_thrust
+include("model/cr3bp/constant_thrust.jl")
+
+# Optimisation modules
+include("opt/ImpulsiveShooting.jl")
 
 end
