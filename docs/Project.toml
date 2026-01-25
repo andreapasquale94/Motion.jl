@@ -1,0 +1,11 @@
+[deps]
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+Optimization = "7f7a1694-90dd-40f0-9382-eb1efda571ba"
+OptimizationIpopt = "43fad042-7963-4b32-ab19-e2a4f9a67124"
+OrdinaryDiffEqVerner = "79d7bb75-1356-48c1-b8c0-6832512096c2"
+
+[compat]
+ForwardDiff = "1"
+Optimization = "5"
+OptimizationIpopt = "1"
+OrdinaryDiffEqVerner = "1"
