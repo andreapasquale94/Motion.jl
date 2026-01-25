@@ -41,6 +41,13 @@ end
     return _compute_libration_point(μ, val, tol)
 end
 
+"""
+    libration_points(μ::Number; tol=1e-14)
+
+Return the five CR3BP libration points (L1–L5) for mass parameter `μ`,
+as 6-element state vectors in the rotating frame. The points are returned
+in order L1, L2, L3, L4, L5.
+"""
 function libration_points(μ::Number; tol=1e-14)
     return [
         compute_libration_point(μ, Val(:L1), tol),

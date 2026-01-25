@@ -3,6 +3,8 @@ module ImpulsiveShooting
 using StaticArrays
 using LinearAlgebra
 
+export indexes, variables, defects, objective
+
 """
 	indexes(Val(N), Val(nx), Val(nu)) -> (it0, idt, iX, iU)
 
@@ -126,9 +128,7 @@ end
 """
 	objective(vars, Val(N), Val(nx), Val(nu), Val(:FUEL)) -> T
 
-Fuel-like objective: `∑ₖ √(‖uₖ‖² + ϵ)` (smooth approximation of `∑‖uₖ‖`).
-
-- Uses `ϵ = T(1e-16)` for numerical smoothness near zero.
+Minimum fuel objective: `∑ₖ √(‖uₖ‖² + ϵ)` (smooth approximation of `∑‖uₖ‖`).
 """
 function objective(
 	vars::AbstractVector{T},
@@ -149,9 +149,7 @@ end
 """
 	objective(vars, Val(N), Val(nx), Val(nu), Val(:ENERGY)) -> T
 
-Energy-like objective: `∑ₖ ‖uₖ‖²`.
-
-Equivalent to `sum(abs2, U)` for the unpacked control matrix `U`.
+Minimum energy objective: `∑ₖ ‖uₖ‖²`.
 """
 function objective(
 	vars::AbstractVector{T},
@@ -162,6 +160,22 @@ function objective(
 ) where {T, N, nx, nu}
 	_, _, _, U, _ = variables(vars, vN, vnx, vnu)
 	return sum(abs2, U)
+end
+
+"""
+	objective(vars, Val(N), Val(nx), Val(nu), Val(:TIME)) -> T
+
+Minimum time objective: `∑ₖ dtₖ`.
+"""
+function objective(
+	vars::AbstractVector{T},
+	vN::Val{N},
+	vnx::Val{nx},
+	vnu::Val{nu},
+	::Val{:TIME},
+) where {T, N, nx, nu}
+	_, idt, _, _ = indexes(vN, vnx, vnu)
+	return sum(@view(vars[idt]))
 end
 
 end # module

@@ -20,6 +20,8 @@ include("model/measures.jl")
 
 include("model/utils.jl")
 
+# TODO: create a CR3BP module with make, flow, solve, ...
+
 export make_cr3bp, flow_cr3bp, solve_cr3bp
 include("model/cr3bp/utils.jl")
 include("model/cr3bp/base.jl")
@@ -30,5 +32,6 @@ include("model/cr3bp/constant_thrust.jl")
 
 # Optimisation modules
 include("opt/ImpulsiveShooting.jl")
+include("opt/ConstThrustShooting.jl")
 
 end
