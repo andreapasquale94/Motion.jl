@@ -1,5 +1,5 @@
 """
-    cr3bp_rhs_constant_thrust(x, p, t) -> SVector{6,T}
+	rhs_const_thrust(x, p, t) -> SVector{6,T}
 
 CR3BP rotating-frame dynamics with *constant thrust acceleration*.
 
@@ -8,7 +8,7 @@ CR3BP rotating-frame dynamics with *constant thrust acceleration*.
   - `p.μ`: CR3BP mass parameter
   - `p.acc`: acceleration specification
 """
-@fastmath function cr3bp_rhs_constant_thrust(x::AbstractVector{T}, p::ComponentArray{<:Number}, t::Number) where T
+@fastmath function rhs_const_thrust(x::AbstractVector{T}, p::ComponentArray{<:Number}, t::Number) where T
 	dx = cr3bp_rhs(x, p, t)
 	a = __acceleration_to_cartesian(x, p.acc)
 	return SVector{6, T}(
@@ -44,7 +44,7 @@ end
 end
 
 """
-	make_cr3bp_constant_thrust(μ, x0, u, t0, tf; model=:Cartesian)
+	make_const_thrust(μ, x0, u, t0, tf; model=:Cartesian)
 
 Create an `ODEProblem` for CR3BP dynamics with *constant thrust acceleration*.
 
@@ -61,7 +61,7 @@ Keyword
   - `:RTN`           → `u = (ar, at, an)` (RTN components)
   - `:SphericalRTN`  → `u = (r, rtn_ras, rtn_dec)` (RTN spherical angles in radians)
 """
-function make_cr3bp_constant_thrust(
+function make_const_thrust(
 	μ::Number,
 	x0::AbstractVector{<:Number},
 	u::AbstractVector{<:Number},
@@ -78,46 +78,47 @@ function make_cr3bp_constant_thrust(
 end
 
 """
-    flow_cr3bp_constant_thrust(μ, x0, u, t0, tf, alg; 
-        model=:Cartesian, reltol=..., abstol=..., kwargs...) -> SVector{6,T}
+	flow_const_thrust(μ, x0, u, t0, tf, alg; 
+		model=:Cartesian, reltol=..., abstol=..., kwargs...) -> SVector{6,T}
 
 Integrate CR3BP with constant thrust and return the final state `x(tf)`.
 
 - `alg` is the OrdinaryDiffEq algorithm (e.g. `Vern9()`).
 """
-function flow_cr3bp_constant_thrust(
-    μ::Number,
-    x0::AbstractVector{<:Number},
-    u::AbstractVector{<:Number},
-    t0::Number,
-    tf::Number,
-    alg;
-    model::Symbol = :Cartesian,
-    reltol = 1e-12,
-    abstol = 1e-12,
-    kwargs...,
+function flow_const_thrust(
+	μ::Number,
+	x0::AbstractVector{<:Number},
+	u::AbstractVector{<:Number},
+	t0::Number,
+	tf::Number,
+	alg;
+	model::Symbol = :Cartesian,
+	reltol = 1e-12,
+	abstol = 1e-12,
+	kwargs...,
 )
-    prob = make_cr3bp_constant_thrust(μ, x0, u, t0, tf; model=model)
-    sol  = solve(prob, alg; save_everystep=false, reltol=reltol, abstol=abstol, kwargs...)
-    return sol.u[end]
+	prob = make_const_thrust(μ, x0, u, t0, tf; model = model)
+	sol  = solve(prob, alg; save_everystep = false, reltol = reltol, abstol = abstol, kwargs...)
+	return sol.u[end]
 end
 
-"""
-    solve_cr3bp_constant_thrust(μ, x0, u, t0, tf, alg; model=:Cartesian, kwargs...) -> Solution
 
-Solve CR3BP with constant thrust and return a `Solution` wrapper.
 """
-function solve_cr3bp_constant_thrust(
-    μ::Number,
-    x0::AbstractVector{<:Number},
-    u::AbstractVector{<:Number},
-    t0::Number,
-    tf::Number,
-    alg;
-    model::Symbol = :Cartesian,
-    kwargs...,
+	build_solution_const_thrust(μ, x0, u0, t0, tf, alg; kwargs...) -> Solution
+
+Integrate CR3BP with constant thrust and return a Solution.
+"""
+function build_solution_const_thrust(
+	μ::Number,
+	x0::AbstractVector{<:Number},
+	u::AbstractVector{<:Number},
+	t0::Number,
+	tf::Number,
+	alg;
+	model = :Cartesian,
+	kwargs...,
 )
-    prob = make_cr3bp_constant_thrust(μ, x0, u, t0, tf; model=model)
-    sol  = solve(prob, alg; kwargs...)
-    return Solution(sol, t0, tf, sol.u[1], sol.u[end])
+	prob = make_const_thrust(μ, x0, u, t0, tf; model = model)
+	sol  = solve(prob, alg; kwargs...)
+	return Solution(sol, t0, tf, sol.u[1], sol.u[end])
 end

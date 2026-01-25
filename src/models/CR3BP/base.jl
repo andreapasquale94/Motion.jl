@@ -1,5 +1,5 @@
 """
-	cr3bp_rhs(x, p::ComponentArray, t) -> SVector{6,T}
+	rhs(x, p::ComponentArray, t) -> SVector{6,T}
 
 CR3BP rotating-frame dynamics (dimensionless).
 
@@ -9,7 +9,7 @@ State ordering:
 Parameters:
 - `p.μ`: mass parameter.
 """
-@inline function cr3bp_rhs(x::AbstractVector{T}, p::ComponentArray{<:Number}, t::Number) where {T}
+@inline function rhs(x::AbstractVector{T}, p::ComponentArray{<:Number}, t::Number) where {T}
 	μ  = T(getproperty(p, :μ))
 	μ1 = one(T) - μ
 
@@ -37,32 +37,32 @@ end
 # --- Make
 
 """
-	make_cr3bp(μ, x0, t0, tf) -> ODEProblem
+	make(μ, x0, t0, tf) -> ODEProblem
 
 Build an `ODEProblem` for CR3BP with parameters stored in a `ComponentArray(μ=...)`.
 Promotes `(μ, x0, t0, tf)` to a common scalar type for consistency.
 """
-function make_cr3bp(μ::Number, x0::AbstractVector{<:Number}, t0::Number, tf::Number)
+function make(μ::Number, x0::AbstractVector{<:Number}, t0::Number, tf::Number)
 	length(x0) == 6 || throw(ArgumentError("expected state of length 6, got $(length(x0))"))
 	T = promote_type(typeof(μ), eltype(x0), typeof(t0), typeof(tf))
 	x0v = @inbounds SVector{6, T}(x0[1], x0[2], x0[3], x0[4], x0[5], x0[6])
 	p = ComponentArray(; μ = T(μ))
-	return ODEProblem(cr3bp_rhs, x0v, (T(t0), T(tf)), p)
+	return ODEProblem(rhs, x0v, (T(t0), T(tf)), p)
 end
 
 
 # --- Flow 
 
 """
-	flow_cr3bp(μ, x0, t0, tf, alg; reltol=..., abstol=..., kwargs...) -> SVector{6,T}
+	flow(μ, x0, t0, tf, alg; reltol=..., abstol=..., kwargs...) -> SVector{6,T}
 
 Integrate CR3BP and return the final state `x(tf)`.
 """
-function flow_cr3bp(
+function flow(
 	μ::Number, x0::AbstractVector{<:Number}, t0::Number, tf::Number, alg;
 	reltol = 1e-12, abstol = 1e-12, kwargs...,
 )
-	prob = make_cr3bp(μ, x0, t0, tf)
+	prob = make(μ, x0, t0, tf)
 	sol  = solve(prob, alg; save_everystep = false, reltol = reltol, abstol = abstol, kwargs...)
 	return sol.u[end]
 end
@@ -70,15 +70,15 @@ end
 # --- Solve 
 
 """
-    solve_cr3bp(μ, x0, t0, tf, alg; kwargs...) -> Solution
+    build_solution(μ, x0, t0, tf, alg; kwargs...) -> Solution
 
 Integrate CR3BP and return a Solution.
 """
-function solve_cr3bp(
+function build_solution(
     μ::Number, x0::AbstractVector{<:Number}, t0::Number, tf::Number, alg;
     kwargs...,
 )
-    prob = make_cr3bp(μ, x0, t0, tf)
+    prob = make(μ, x0, t0, tf)
     sol  = solve(prob, alg; kwargs...)
     return Solution(sol, t0, tf, sol.u[1], sol.u[end])
 end

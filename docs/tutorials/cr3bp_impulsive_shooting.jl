@@ -51,24 +51,24 @@ LPs = Motion.libration_points(μ)
 # Unstable (forward in time) from L1
 tfu = 1.2π
 Lp1 = LPs[1]
-M1 = Motion.cr3bp_jacobian(Lp1, μ)
+M1 = Motion.CR3BP.jacobian(Lp1, μ)
 eig1 = eigen(M1)
 w_u = real(eig1.vectors[:, end])  # heuristic: take last eigenvector
 
 x0u = Lp1 .+ 1e-3 * w_u
-sol_u = solve_cr3bp(μ, x0u, 0.0, tfu, Vern9(); abstol=1e-13, reltol=1e-13)
+sol_u = Motion.CR3BP.build_solution(μ, x0u, 0.0, tfu, Vern9(); abstol=1e-12, reltol=1e-12);
 dt_u = LinRange(0, tfu, 1000)
 X_wu = reduce(hcat, sol_u.(dt_u));
 
 # Stable (backward in time) into L2
 tsu = -2π
 Lp2 = LPs[2]
-M2 = Motion.cr3bp_jacobian(Lp2, μ)
+M2 = Motion.CR3BP.jacobian(Lp2, μ)
 eig2 = eigen(M2)
 w_s = real(eig2.vectors[:, end])
 
 x0s = Lp2 .+ 1e-2 * w_s
-sol_s = solve_cr3bp(μ, x0s, 0.0, tsu, Vern9(); abstol=1e-13, reltol=1e-13)
+sol_s = Motion.CR3BP.build_solution(μ, x0s, 0.0, tsu, Vern9(); abstol=1e-12, reltol=1e-12)
 dt_s = LinRange(0, tsu, 1000)
 X_ws = reduce(hcat, sol_s.(dt_s))
 
@@ -140,7 +140,7 @@ B[(nx-nu+1):end, :] .= I(nu)  # add to velocity components only
 
 flow = (x, u, t0, t1) -> begin
     x0 = x + B*u
-    Motion.flow_cr3bp(μ, x0, t0, t1, Vern9(); reltol=1e-8, abstol=1e-8)
+    Motion.CR3BP.flow(μ, x0, t0, t1, Vern9(); reltol=1e-8, abstol=1e-8)
 end
 
 objective = (x, p) -> Motion.ImpulsiveShooting.objective(x, vN, vnx, vnu, vobj)
@@ -186,7 +186,7 @@ sol = solve(prob,
         limited_memory_max_history = 10,
     );
     maxiters = 1000,
-    verbose = 2,
+    verbose = 4,
     xtol = 1e-4,
 );
 
@@ -205,7 +205,7 @@ for k in 1:(N-1)
     uk = @view Uo[:,k]
 
     x0seg = xk + B*uk
-    solseg = Motion.solve_cr3bp(μ, x0seg, to[k], to[k+1], Vern9(); reltol=1e-8, abstol=1e-8)
+    solseg = Motion.CR3BP.build_solution(μ, x0seg, to[k], to[k+1], Vern9(); reltol=1e-8, abstol=1e-8)
 
     τ = range(to[k], to[k+1], length=100)
     Xseg = reduce(hcat, solseg.(τ))

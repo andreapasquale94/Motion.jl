@@ -1,5 +1,5 @@
 
-@fastmath function cr3bp_jacobian(x::AbstractVector{T}, μ::Number) where T
+@fastmath function jacobian(x::AbstractVector{T}, μ::Number) where T
 	@inbounds px, py, pz = x[1], x[2], x[3]
 
 	px1 = px+μ
