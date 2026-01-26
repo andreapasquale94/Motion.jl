@@ -11,7 +11,7 @@
 
 using Motion
 using LinearAlgebra
-using NonlinearSolve
+using SimpleNonlinearSolve
 using OrdinaryDiffEqVerner
 using StaticArrays
 using Plots
@@ -79,11 +79,11 @@ end;
 
 # Solve for `z`
 prob = NonlinearProblem(func!, vcat(x0[5], T0))
-sol = solve(prob; verbose = true, abstol = reltol=1e-10 );
+sol = solve(prob, SimpleNewtonRaphson(); verbose = true, abstol = reltol=1e-10);
 
 # We'll integrate the initial guess:
 sol_guess = Motion.CR3BP.build_solution(μ, x0, 0.0, T0, Vern9(); abstol = reltol=1e-12 )
-X_guess = reduce(hcat, sol_guess.(LinRange(0, T0, 1000)))
+X_guess = reduce(hcat, sol_guess.(LinRange(0, T0, 1000)));
 
 # Integrate the corrected orbit:
 xn = [x0g[1], 0, 0, 0, sol.u[1], 0]
