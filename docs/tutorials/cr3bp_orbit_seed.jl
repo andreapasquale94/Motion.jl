@@ -35,12 +35,12 @@ L, W = eigen(JLP)
 #
 # For planar Lyapunov orbits around L₁/L₂, a standard seed is a small displacement
 # along one of the **center** eigenvectors (purely imaginary eigenvalues), and then
-# we enforce the planar symmetry (y=z=ẏ=ż=0 initially).
+# we enforce the planar symmetry (`y=z=ẏ=ż=0` initially).
 x0g = xLP + 0.1 * real(W[:, 5] / norm(W[:, 5]));
 
 # Impose planar symmetry:
-# - start on the x-axis (y=z=0)
-# - start with vx=ż=0
+# - start on the x-axis (`y=z=0`)
+# - start with `vx=ż=0`
 # - leave vy free (we'll correct it)
 x0 = [x0g[1], 0, 0, 0, x0g[5], 0]
 
@@ -51,13 +51,13 @@ T0 = 2π / abs(L[5])
 #
 # A planar Lyapunov orbit has a symmetry that lets us enforce periodicity with *two scalar constraints*, typically:
 #
-# - y(T/2) = 0
-# - vₓ(T/2) = 0
+# - `y(T/2) = 0`
+# - `vₓ(T/2) = 0`
 #
 # while solving for:
 #
-# - vᵧ(0) (initial transverse velocity)
-# - T (the period)
+# - `vᵧ(0)` (initial transverse velocity)
+# - `T` (the period)
 layout = Motion.Continuation.ReducedLayout(
 	Motion.Continuation.SingleShootingLayout(6),
 	Motion.Continuation.VarMap(7, [5, 7]),
