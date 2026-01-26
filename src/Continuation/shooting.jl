@@ -58,7 +58,7 @@ struct VarMap{T, VI <: AbstractVector{Int}}
 	free_idx::VI
 end
 
-function VarMap(full_len::Int, free_idx::AbstractVector{Int}) where {T}
+function VarMap(full_len::Int, free_idx::AbstractVector{Int})
 	all(1 .<= free_idx .<= full_len) || throw(ArgumentError("free_idx contains out-of-range indices"))
 	return VarMap{Float64, typeof(free_idx)}(full_len, free_idx)
 end

@@ -1,4 +1,4 @@
-# CR3BP: Lyapunov family seeding
+# # CR3BP: Lyapunov family seeding
 #
 # This tutorial shows how to:
 #
