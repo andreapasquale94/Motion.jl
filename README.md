@@ -13,7 +13,3 @@ _A Multibody Trajectory Design Toolkit_
 using Pkg
 Pkg.add(url="https://github.com/andreapasquale94/Motion.jl")
 ```
-
-## License
-
-MIT license. See `LICENSE`.
