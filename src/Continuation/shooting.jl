@@ -91,10 +91,9 @@ end
 nx(L::ReducedLayout) = nx(L.full)
 nvar(L::ReducedLayout) = nfree(L.vmap)
 
-function ReducedLayout(full::L, vmap::VM) where {L, VM <: VarMap}
+function ReducedLayout(full::L, vmap::VM, z0=zeros(Float64, vmap.full_len)) where {L, VM <: VarMap}
 	nvar(full) == vmap.full_len || throw(DimensionMismatch("full layout expects nvar=$(nvar(full)) but vmap.full_len=$(vmap.full_len)"))
-	zfull = zeros(Float64, vmap.full_len)
-	return ReducedLayout{L, VM, typeof(zfull)}(full, vmap, zfull)
+	return ReducedLayout{L, VM, typeof(z0)}(full, vmap, z0)
 end
 
 @inline function unpack(L::ReducedLayout, z_free::AbstractVector)
