@@ -17,6 +17,22 @@ Public = true
 Private = false
 ```
 
+### ER3BP 
+
+```@autodocs
+Modules = [Motion.ER3BP]
+Public = true
+Private = false
+```
+
+### BCR4BP 
+
+```@autodocs
+Modules = [Motion.BCR4BP]
+Public = true
+Private = false
+```
+
 ## Utilities
 
 ```@autodocs
