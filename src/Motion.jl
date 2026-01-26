@@ -21,6 +21,7 @@ include("models/utils.jl")
 
 # Models
 include("models/CR3BP/CR3BP.jl")
+include("models/ER3BP/ER3BP.jl")
 
 # Optimisation modules
 include("opt/ImpulsiveShooting.jl")
