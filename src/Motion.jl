@@ -28,4 +28,7 @@ include("models/BCR4BP/BCR4BP.jl")
 include("opt/ImpulsiveShooting.jl")
 include("opt/ConstThrustShooting.jl")
 
+# Continuation
+include("Continuation/Continuation.jl")
+
 end

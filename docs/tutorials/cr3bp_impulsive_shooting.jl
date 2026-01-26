@@ -17,6 +17,9 @@
 # - `Optimization`, `OptimizationIpopt` for optimisation
 # - `ForwardDiff` for gradients computation
 # - `Plots` for plotting
+#
+# The code is written to be compatible with **Literate.jl**: run it as a normal Julia
+# script, or convert it to Markdown/Notebook with Literate.
 
 using Motion
 using LinearAlgebra
