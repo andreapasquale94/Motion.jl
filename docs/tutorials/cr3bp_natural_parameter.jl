@@ -33,7 +33,7 @@ L, W = eigen(JLP);
 # ## Linear seed near L₁ (center direction)
 #
 # We move a small distance along a center eigenvector direction, then impose planar symmetry.
-x0g = xLP + 0.05 * real(W[:, 5] / norm(W[:, 5]));
+x0g = xLP + 0.02 * real(W[:, 5] / norm(W[:, 5]));
 
 # Planar initial condition: y=z=vx=vz=0 and vy free (seeded from eigenvector here).
 x0 = [x0g[1], 0, 0, 0, x0g[5], 0]
@@ -141,7 +141,7 @@ popfirst!(history)
 #
 # We take small steps in x[1].
 Δs = 1e-3
-nsteps = 120
+nsteps = 100
 
 for i ∈ 1:nsteps
     push!(history, Continuation.step!(prob, history; ds = Δs)[1])
@@ -159,7 +159,8 @@ begin
 
     scatter!(p, [xLP[1]], [xLP[2]], label = false, marker = :d, color = :red)
 
-    for point in history
+    for i in 1:5:nsteps
+        point = history[i]
         xn = [point.z[1], 0, 0, 0, point.z[2], 0]
         Tn = 2 * point.z[3]
 
