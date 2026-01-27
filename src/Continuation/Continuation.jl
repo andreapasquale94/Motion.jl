@@ -12,7 +12,14 @@ include("constraints.jl")
 export ShootingArc, SingleShootingResidual
 include("shooting.jl")
 
-export Corrector, solve
-include("corrector.jl")
+export AbstractResidual, AbstractPredictor, AbstractPredictor
+export ContinuationPoint, nvar, ContinuationProblem, Corrector, solve
+include("problem.jl")
+
+export SimpleNaturalParameter
+include("natural_param.jl")
+
+export PseudoArcLength
+include("pseudo_arclen.jl")
 
 end

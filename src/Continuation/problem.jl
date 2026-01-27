@@ -1,4 +1,8 @@
-struct Corrector{ALG, KW}
+abstract type AbstractPredictor end
+
+abstract type AbstractCorrector end
+
+struct Corrector{ALG, KW} <: AbstractCorrector 
 	alg::ALG
 	kwargs::KW
 end
@@ -16,4 +20,21 @@ function SciMLBase.solve(sys::AbstractResidual, corr::Corrector, z0::Vector{T}, 
 	znew = Vector{T}(sol.u)
 	stats = CorrectorStats(SciMLBase.successful_retcode(sol), sol.resid)
 	return znew, stats
+end
+
+struct ContinuationProblem{SYS, PR, CR}
+	sys::SYS
+	predictor::PR
+	corrector::CR
+end
+
+function ContinuationProblem(sys::AbstractResidual;
+	predictor::AbstractPredictor = PseudoArcLength(),
+	corrector::AbstractCorrector)
+	return ContinuationProblem{typeof(sys), typeof(predictor), typeof(corrector)}(sys, predictor, corrector)
+end
+
+struct ContinuationPoint{T}
+	z::Vector{T}
+	λ::T
 end
