@@ -1,11 +1,18 @@
 module Continuation
 
+using LinearAlgebra
 using SciMLBase: SciMLBase
 
-export SingleShootingLayout, ReducedLayout, nx, nvar 
-export SingleShooting, shoot, residual!, restrict
+export SingleShootingLayout, VarMap, ReducedLayout, unpack
+include("layout.jl")
+
+export AbstractConstraint, constraint!, GenericConstraint, HalfPeriodSymmetry, Periodicity
+include("constraints.jl")
+
+export ShootingArc, ConstrainedShooting
 include("shooting.jl")
-include("model.jl")
-include("problem.jl")
+
+export Corrector, solve
+include("corrector.jl")
 
 end

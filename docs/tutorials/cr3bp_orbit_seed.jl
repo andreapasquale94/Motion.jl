@@ -9,12 +9,14 @@
 # The code is written to be compatible with **Literate.jl**: run it as a normal Julia
 # script, or convert it to Markdown/Notebook with Literate.
 
-using Motion
 using LinearAlgebra
 using SimpleNonlinearSolve
 using OrdinaryDiffEqVerner
 using StaticArrays
 using Plots
+
+using Motion
+using Motion.Continuation
 
 # ## Problem setup
 const μ = 0.012150584269940356
@@ -57,38 +59,31 @@ T0 = 2π / abs(L[5])
 # while solving for:
 #
 # - `vᵧ(0)` (initial transverse velocity)
-# - `T` (the period)
-layout = Motion.Continuation.ReducedLayout(
-	Motion.Continuation.SingleShootingLayout(6),
-	Motion.Continuation.VarMap(7, [5, 7]),
-	vcat(x0, T0),
+# - `T/2` (the half-period)
+layout = ReducedLayout(
+	SingleShootingLayout(6), VarMap(7, [5, 7]), vcat(x0, T0/2),
 );
 
 # Create a shooting segment
-flow = (x, T, λ) -> Motion.CR3BP.flow(μ, x, 0.0, T/2, Vern9(); abstol = reltol=1e-12 );
-shooter = Motion.Continuation.SingleShooting(flow; layout = layout)
-
-func! = (out, z, p) -> begin
-	L = shooter.layout
-	u = Motion.Continuation.unpack(L, z)
-	xf = Motion.Continuation.shoot(shooter, u.x0, u.T, 0.0)
-	out[1] = xf[2]
-	out[2] = xf[4]
-	return out
-end;
+flow = (x, T, λ) -> Motion.CR3BP.flow(μ, x, 0.0, T, Vern9(); abstol =  reltol=1e-12 );
+sys = ConstrainedShooting(
+	ShootingArc(flow, layout),
+	HalfPeriodSymmetry((2, 4)), # fix y(T/2) = vₓ(T/2) = 0
+)
 
 # Solve for `z`
-prob = NonlinearProblem(func!, vcat(x0[5], T0))
-sol = solve(prob, SimpleNewtonRaphson(); verbose = true, abstol = reltol=1e-10);
+zinit = [x0[5], T0/2]
+corr = Corrector(SimpleNewtonRaphson(); abstol =  reltol=1e-10 , verbose = true)
+zsol, stat = solve(sys, corr, zinit, 0.0)
 
 # We'll integrate the initial guess:
-sol_guess = Motion.CR3BP.build_solution(μ, x0, 0.0, T0, Vern9(); abstol = reltol=1e-12 )
+sol_guess = Motion.CR3BP.build_solution(μ, x0, 0.0, T0, Vern9(); abstol =  reltol=1e-12 )
 X_guess = reduce(hcat, sol_guess.(LinRange(0, T0, 1000)));
 
 # Integrate the corrected orbit:
-xn = [x0g[1], 0, 0, 0, sol.u[1], 0]
-Tn = sol.u[2]
-sol = Motion.CR3BP.build_solution(μ, xn, 0.0, Tn, Vern9(); abstol = reltol=1e-12 )
+xn = [x0g[1], 0, 0, 0, zsol[1], 0]
+Tn = 2*zsol[2]
+sol = Motion.CR3BP.build_solution(μ, xn, 0.0, Tn, Vern9(); abstol =  reltol=1e-12 )
 X = reduce(hcat, sol.(LinRange(0, Tn, 1000)));
 
 # Plot: initial guess vs corrected periodic orbit
