@@ -56,16 +56,16 @@ abstract type AbstractResidual end
 
 Base.size(::AbstractResidual) = error("Base.size(::AbstractResidual) not implemented")
 
-struct ConstrainedShooting{SH, C} <: AbstractResidual
+struct SingleShootingResidual{SH, C} <: AbstractResidual
 	shooter::SH
 	constraint::C
 end
 
-nvar(sys::ConstrainedShooting) = nvar(sys.shooter)
+nvar(sys::SingleShootingResidual) = nvar(sys.shooter)
 
-Base.size(sys::ConstrainedShooting) = size(sys.constraint)
+Base.size(sys::SingleShootingResidual) = size(sys.constraint)
 
-function residual!(out::AbstractVector, sys::ConstrainedShooting, z::AbstractVector, λ)
+function residual!(out::AbstractVector, sys::SingleShootingResidual, z::AbstractVector, λ)
 	u  = unpack(sys.shooter.layout, z)
 	x0 = u.x0
 	T  = u.T

@@ -61,12 +61,13 @@ T0 = 2π / abs(L[5])
 # - `vᵧ(0)` (initial transverse velocity)
 # - `T/2` (the half-period)
 layout = ReducedLayout(
-	SingleShootingLayout(6), VarMap(7, [5, 7]), vcat(x0, T0/2),
+	SingleShootingLayout(6), VarMap(7, [5, 7]), 
+	vcat(x0, T0/2)
 );
 
-# Create a shooting segment
+# Create a shooting residual model
 flow = (x, T, λ) -> Motion.CR3BP.flow(μ, x, 0.0, T, Vern9(); abstol =  reltol=1e-12 );
-sys = ConstrainedShooting(
+sys = SingleShootingResidual(
 	ShootingArc(flow, layout),
 	HalfPeriodSymmetry((2, 4)), # fix y(T/2) = vₓ(T/2) = 0
 )

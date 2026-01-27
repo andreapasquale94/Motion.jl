@@ -9,7 +9,7 @@ include("layout.jl")
 export AbstractConstraint, constraint!, GenericConstraint, HalfPeriodSymmetry, Periodicity
 include("constraints.jl")
 
-export ShootingArc, ConstrainedShooting
+export ShootingArc, SingleShootingResidual
 include("shooting.jl")
 
 export Corrector, solve
