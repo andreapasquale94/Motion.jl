@@ -140,14 +140,15 @@ popfirst!(history)
 # ## Run the continuation
 #
 # We take small steps in x[1].
-Δs = 1e-3
-nsteps = 100
+Δs = 1e-4
+nsteps = 1000
 
 for i ∈ 1:nsteps
     push!(history, Continuation.step!(prob, history; ds = Δs)[1])
 end
 
 # ## Plot the orbit family
+begin
 p = plot(
     framestyle = :box,
     xlabel = "x (-)", ylabel = "y (-)",
@@ -158,7 +159,7 @@ p = plot(
 
 scatter!(p, [xLP[1]], [xLP[2]], label = false, marker = :d, color = :red)
 
-for i in 1:5:nsteps
+for i in 1:10:nsteps
     point = history[i]
     xn = [point.z[1], 0, 0, 0, point.z[2], 0]
     Tn = 2 * point.z[3]
@@ -169,5 +170,6 @@ for i in 1:5:nsteps
     X = reduce(hcat, sol.(LinRange(0, Tn, 1000)))
 
     plot!(p, X[1, :], X[2, :], color = :black, linewidth = 0.5, label = false)
+end
 end
 p
