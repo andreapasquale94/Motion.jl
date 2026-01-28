@@ -148,29 +148,26 @@ for i ∈ 1:nsteps
 end
 
 # ## Plot the orbit family
-begin
-    p = plot(
-        framestyle = :box,
-        xlabel = "x (-)", ylabel = "y (-)",
-        aspect_ratio = 1,
-        legend = :bottomright,
-        dpi = 200,
+p = plot(
+    framestyle = :box,
+    xlabel = "x (-)", ylabel = "y (-)",
+    aspect_ratio = 1,
+    legend = :bottomright,
+    dpi = 200,
+)
+
+scatter!(p, [xLP[1]], [xLP[2]], label = false, marker = :d, color = :red)
+
+for i in 1:5:nsteps
+    point = history[i]
+    xn = [point.z[1], 0, 0, 0, point.z[2], 0]
+    Tn = 2 * point.z[3]
+
+    sol = Motion.CR3BP.build_solution(
+        μ, xn, 0.0, Tn, Vern9(); abstol = reltol = 1e-12
     )
+    X = reduce(hcat, sol.(LinRange(0, Tn, 1000)))
 
-    scatter!(p, [xLP[1]], [xLP[2]], label = false, marker = :d, color = :red)
-
-    for i in 1:5:nsteps
-        point = history[i]
-        xn = [point.z[1], 0, 0, 0, point.z[2], 0]
-        Tn = 2 * point.z[3]
-
-        sol = Motion.CR3BP.build_solution(
-            μ, xn, 0.0, Tn, Vern9(); abstol = reltol = 1e-12
-        )
-        X = reduce(hcat, sol.(LinRange(0, Tn, 1000)))
-
-        plot!(p, X[1, :], X[2, :], color = :black, linewidth = 0.5, label = false)
-    end
-
-    p
+    plot!(p, X[1, :], X[2, :], color = :black, linewidth = 0.5, label = false)
 end
+p

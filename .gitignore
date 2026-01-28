@@ -1,7 +1,7 @@
 .vscode
 temp
 
-.DS_store
+**.DS_store
 Manifest.toml
 
 build
