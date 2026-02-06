@@ -44,7 +44,7 @@ function step!(
 ) where {SYS, C, T}
 	zpred, λpred, wk, t = predict(cp.predictor, history, ds)
 	palc = PseudoArcLengthShootingResidual(cp.sys, wk, t, ds)
-	wnew, stat = solve(palc, cp.corrector, vcat(zpred, λpred), zero(T))
+	wnew, stat = SciMLBase.solve(palc, cp.corrector, vcat(zpred, λpred), zero(T))
 	znew = @view(wnew[1:(end-1)])
 	λnew = wnew[end]
 	return ContinuationPoint{T}(znew, λnew), stat
