@@ -141,7 +141,7 @@ popfirst!(history)
 #
 # We take small steps in x[1].
 Δs = 1e-4
-nsteps = 1000
+nsteps = 250
 
 for i ∈ 1:nsteps
     push!(history, Continuation.step!(prob, history; ds = Δs)[1])
