@@ -126,7 +126,7 @@ nat = ContinuationProblem(
     corrector = corr,
 );
 
-palc_sys = SimpleNaturalParameterShootingResidual(sys, 1)
+palc_sys = Continuation.SimpleNaturalParameterShootingResidual(sys, 1)
 palc = ContinuationProblem(
     palc_sys;
     predictor = PseudoArcLength(),
