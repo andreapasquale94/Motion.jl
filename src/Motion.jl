@@ -25,8 +25,7 @@ include("models/ER3BP/ER3BP.jl")
 include("models/BCR4BP/BCR4BP.jl")
 
 # Optimisation modules
-include("opt/ImpulsiveShooting.jl")
-include("opt/ConstThrustShooting.jl")
+include("opt/MultipleShooting.jl")
 
 # Continuation
 include("Continuation/Continuation.jl")

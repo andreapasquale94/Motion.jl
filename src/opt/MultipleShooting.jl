@@ -1,4 +1,4 @@
-module ImpulsiveShooting
+module MultipleShooting
 
 using StaticArrays
 using LinearAlgebra
@@ -188,6 +188,30 @@ function objective(
 end
 
 """
+    objective(vars, Val(N), Val(nx), Val(nu), Val(:PIECEWISE_CONST_FUEL)) -> T
+
+Minimum fuel objective for continuous thrust (piecewise-constant per segment): `∑_{k=1}^{N-1} √(‖u_k‖² + ϵ) * dt_k`
+
+Smooth approximation of `∫‖u(t)‖ dt` with `ϵ = T(1e-16)`.
+"""
+function objective(
+    vars::AbstractVector{T},
+    vN::Val{N},
+    vnx::Val{nx},
+    vnu::Val{nu},
+    ::Val{:PIECEWISE_CONST_FUEL},
+) where {T,N,nx,nu}
+    _, dt, _, U, _ = variables(vars, vN, vnx, vnu)
+    ϵ = T(1e-16)
+    v = zero(T)
+    @inbounds for k in 1:(N-1)
+        uk = @view U[:,k]
+        v += sqrt(sum(abs2, uk) + ϵ) * dt[k]
+    end
+    return v
+end
+
+"""
 	objective(vars, Val(N), Val(nx), Val(nu), Val(:ENERGY)) -> T
 
 Minimum energy objective: `∑ₖ ‖uₖ‖²`.
@@ -201,6 +225,29 @@ function objective(
 ) where {T, N, nx, nu}
 	_, _, _, U, _ = variables(vars, vN, vnx, vnu)
 	return sum(abs2, U)
+end
+
+"""
+    objective(vars, Val(N), Val(nx), Val(nu), Val(:PIECEWISE_CONST_ENERGY)) -> T
+
+Minimum energy continuous thrust: `∑_{k=1}^{N-1} ‖u_k‖² dt_k`
+
+Approximates `∫‖u(t)‖² dt` for piecewise-constant control.
+"""
+function objective(
+    vars::AbstractVector{T},
+    vN::Val{N},
+    vnx::Val{nx},
+    vnu::Val{nu},
+    ::Val{:PIECEWISE_CONST_ENERGY},
+) where {T,N,nx,nu}
+    _, dt, _, U, _ = variables(vars, vN, vnx, vnu)
+    v = zero(T)
+    @inbounds for k in 1:(N-1)
+        uk = @view U[:,k]
+        v += sum(abs2, uk) * dt[k]
+    end
+    return v
 end
 
 """
