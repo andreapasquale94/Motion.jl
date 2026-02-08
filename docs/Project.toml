@@ -1,7 +1,7 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 Optimization = "7f7a1694-90dd-40f0-9382-eb1efda571ba"
 OptimizationIpopt = "43fad042-7963-4b32-ab19-e2a4f9a67124"
 OrdinaryDiffEqVerner = "79d7bb75-1356-48c1-b8c0-6832512096c2"

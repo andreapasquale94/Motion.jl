@@ -14,7 +14,12 @@ makedocs(
 	],
 	sitename = "Motion.jl",
 	authors = "Andrea Pasquale <andrea.pasquale@outlook.it>",
-	format = Documenter.HTML(; prettyurls = CI, highlights = ["yaml"], ansicolor = true),
+	format = Documenter.HTML(; 
+		prettyurls = CI, 
+		highlights = ["yaml"], 
+		ansicolor = true,
+		size_threshold = nothing
+	),
 	pages = [
 		"Home" => "index.md",
 		"Tutorials" => GENERATED_FILES,
