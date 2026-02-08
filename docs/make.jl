@@ -9,8 +9,7 @@ makedocs(
 	modules = [
 		Motion,
 		Motion.CR3BP,
-		Motion.ImpulsiveShooting,
-		Motion.ConstThrustShooting,
+		Motion.MultipleShooting,
 	],
 	sitename = "Motion.jl",
 	authors = "Andrea Pasquale <andrea.pasquale@outlook.it>",
