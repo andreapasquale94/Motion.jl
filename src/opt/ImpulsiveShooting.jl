@@ -90,40 +90,81 @@ This function is allocation-free.
 end
 
 """
-	defects(vars, flow, Val(N), Val(nx), Val(nu)) -> SVector{nx*(N-1),T}
+    defects(vars, flow, Val(N), Val(nx), Val(nu), Val(:Forward)) -> SVector{nx*(N-1),T}
 
-Compute multiple-shooting continuity defects:
-
-`d_k = X_{k+1} - flow(X_k, U_k, t_k, t_{k+1})`, for `k=1..N-1`.
+One-sided multiple shooting defects:
+    d_k = X_{k+1} - flow(X_k, U_k, t_k, t_{k+1})
 
 The defects are returned concatenated as a single vector of length `nx*(N-1)`.
-
-`flow(x,u,t0,t1)` must return a length-`nx` vector (preferably `SVector{nx,T}`).
 """
 function defects(
-	vars::AbstractVector{T},
-	flow::F,
-	vN::Val{N},
-	vnx::Val{nx},
-	vnu::Val{nu},
+    vars::AbstractVector{T},
+    flow::F,
+    vN::Val{N},
+    vnx::Val{nx},
+    vnu::Val{nu},
+    ::Val{:Forward},
 ) where {T, F, N, nx, nu}
-	_, _, X, U, t = variables(vars, vN, vnx, vnu)
+    _, _, X, U, t = variables(vars, vN, vnx, vnu)
 
-	# build as a tuple of SVectors then flatten deterministically
-	blocks = ntuple(Val(N-1)) do k
-		@inbounds begin
-			xk   = SVector{nx, T}(X[:, k])
-			xkp1 = SVector{nx, T}(X[:, k+1])
-			uk   = SVector{nu, T}(U[:, k])
+    blocks = ntuple(Val(N-1)) do k
+        @inbounds begin
+            xk   = SVector{nx, T}(X[:, k])
+            xkp1 = SVector{nx, T}(X[:, k+1])
+            uk   = SVector{nu, T}(U[:, k])
 
-			xn = flow(xk, uk, t[k], t[k+1])
-			xnS = (xn isa SVector{nx, T}) ? xn : SVector{nx, T}(xn)
+            xn = flow(xk, uk, t[k], t[k+1])
+            xnS = (xn isa SVector{nx, T}) ? xn : SVector{nx, T}(xn)
 
-			xkp1 - xnS
-		end
-	end
+            xkp1 - xnS
+        end
+    end
 	return SVector{nx*(N-1), T}(reduce(vcat, blocks))
 end
+
+"""
+    defects(vars, flow, Val(N), Val(nx), Val(nu), Val(:ForwardBackward)) -> SVector{nx*(N-1),T}
+
+Forward-backward midpoint defects (dt split by 2):
+Let tm = (t_k + t_{k+1})/2.
+    x_f = flow(X_k,   U_k,   t_k,   tm)
+    x_b = flow(X_{k+1}, 0,t_{k+1},  tm)  # backward integration
+Defect:
+    d_k = x_f - x_b
+"""
+function defects(
+    vars::AbstractVector{T},
+    flow::F,
+    vN::Val{N},
+    vnx::Val{nx},
+    vnu::Val{nu},
+    ::Val{:ForwardBackward},
+) where {T, F, N, nx, nu}
+    _, dt, X, U, t = variables(vars, vN, vnx, vnu)
+
+    u0 = zero(SVector{nu, T})  # zero maneuver at the backward start (pre-impulse)
+
+    blocks = ntuple(Val(N-1)) do k
+        @inbounds begin
+            xk   = SVector{nx, T}(X[:, k])
+            xkp1 = SVector{nx, T}(X[:, k+1])
+
+            uk = SVector{nu, T}(U[:, k])  # maneuver at node k applies on forward half
+
+            tm = t[k] + dt[k] / T(2) # mid-point
+
+            xf = flow(xk,   uk, t[k],   tm)
+            xb = flow(xkp1, u0, t[k+1], tm)  # No maneuver at node k+1
+
+            xfS = (xf isa SVector{nx, T}) ? xf : SVector{nx, T}(xf)
+            xbS = (xb isa SVector{nx, T}) ? xb : SVector{nx, T}(xb)
+
+            xfS - xbS
+        end
+    end
+	return SVector{nx*(N-1), T}(reduce(vcat, blocks))
+end
+
 
 """
 	objective(vars, Val(N), Val(nx), Val(nu), Val(:FUEL)) -> T
