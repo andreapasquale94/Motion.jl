@@ -34,6 +34,20 @@ Parameters:
 	end
 end
 
+function rhs_stm(x::AbstractVector{T}, p::ComponentArray{<:Number}, t) where T
+	μ  = T(getproperty(p, :μ))
+    # State transition matrix
+    Φ = reshape(@view(x[7:end]), Size(6, 6))
+    # Compute state derivative
+    δx = rhs(x, p, t)
+    # Compute jacobian
+    J = jacobian(x, μ)
+    # Compute stm derivative
+    δΦ = J * Φ
+    return vcat(δx, reshape(δΦ, Size(36)))
+end
+
+
 # --- Make
 
 """

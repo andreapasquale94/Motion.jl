@@ -13,9 +13,11 @@ include("utils.jl")
 include("base.jl")
 include("batch.jl")
 include("constant_thrust.jl")
+include("stability.jl")
 
 export rhs, rhs_const_thrust, jacobian
 export make, flow, build_solution
 export make_const_thrust, flow_const_thrust, build_solution_const_thrust
+export monodromy, stability_index
 
 end

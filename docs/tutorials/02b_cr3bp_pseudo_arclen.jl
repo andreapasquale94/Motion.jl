@@ -70,14 +70,14 @@ T0 = 2π / abs(L[5])
 #
 # Note: we store T/2 as our third reduced variable, so we will interpret it accordingly later.
 layout = ReducedLayout(
-    SingleShootingLayout(6),
-    VarMap(7, [1, 5, 7]),
-    vcat(x0, T0),
+	SingleShootingLayout(6),
+	VarMap(7, [1, 5, 7]),
+	vcat(x0, T0),
 );
 
 # Flow map: propagate from t=0 to t=T (or T/2, depending on the arc object)
 flow = (x, T, λ) -> Motion.CR3BP.flow(
-    μ, x, 0.0, T, Vern9(); abstol = reltol = 1e-12
+	μ, x, 0.0, T, Vern9(); abstol =  reltol = 1e-12 ,
 );
 
 # ## Residual definition
@@ -92,7 +92,7 @@ flow = (x, T, λ) -> Motion.CR3BP.flow(
 #
 # Combined into a single residual model:
 sys = SingleShootingResidual(
-    ShootingArc(flow, layout), HalfPeriodSymmetry((2, 4)),
+	ShootingArc(flow, layout), HalfPeriodSymmetry((2, 4)),
 );
 
 # Initial reduced guess
@@ -108,7 +108,7 @@ zinit = [x0[1], x0[5], T0/2]
 # Continuation steps use a predictor (here natural parameter / PALC) and a corrector
 # (Newton) to land back on the solution manifold.
 corr = Corrector(
-    SimpleNewtonRaphson(); abstol = reltol = 1e-10, verbose = true
+	SimpleNewtonRaphson(); abstol =  reltol = 1e-10 , verbose = true,
 );
 
 # ## Continuation problems
@@ -121,16 +121,16 @@ corr = Corrector(
 # - `palc` is used for the rest of the continuation.
 
 nat = ContinuationProblem(
-    sys;
-    predictor = SimpleNaturalParameter(1),
-    corrector = corr,
+	sys;
+	predictor = SimpleNaturalParameter(1),
+	corrector = corr,
 );
 
 palc_sys = Continuation.SimpleNaturalParameterShootingResidual(sys, 1)
 palc = ContinuationProblem(
-    palc_sys;
-    predictor = PseudoArcLength(),
-    corrector = corr,
+	palc_sys;
+	predictor = PseudoArcLength(),
+	corrector = corr,
 );
 
 # ## Initialization of history
@@ -138,7 +138,7 @@ palc = ContinuationProblem(
 # The continuation stack stores a `ContinuationPoint(z, λ)`.
 # We warm-start two points using natural-parameter steps.
 history = ContinuationPoint{Float64}[
-    ContinuationPoint{Float64}(zinit, zinit[1])
+	ContinuationPoint{Float64}(zinit, zinit[1])
 ];
 
 # First: correct the initial point tightly.
@@ -153,32 +153,69 @@ push!(history, Continuation.step!(nat, history; ds = 1e-4)[1]);
 nsteps = 400
 
 for i ∈ 1:nsteps
-    push!(history, Continuation.step!(palc, history; ds = Δs)[1])
+	push!(history, Continuation.step!(palc, history; ds = Δs)[1])
 end;
 
 # ## Plot the orbit family
 begin
-p = plot(
-    framestyle = :box,
-    xlabel = "x (-)", ylabel = "y (-)",
-    aspect_ratio = 1,
-    legend = :bottomright,
-    dpi = 200,
-)
+	p = plot(
+		framestyle = :box,
+		xlabel = "x (-)", ylabel = "y (-)",
+		aspect_ratio = 1,
+		legend = :bottomright,
+		dpi = 200,
+	)
 
-scatter!(p, [xLP[1]], [xLP[2]], label = false, marker = :d, color = :red)
+	scatter!(p, [xLP[1]], [xLP[2]], label = false, marker = :d, color = :red)
 
-for i in 1:10:nsteps
-    point = history[i]
-    xn = [point.z[1], 0, 0, 0, point.z[2], 0]
-    Tn = 2 * point.z[3]
+	for i in 1:10:nsteps
+		point = history[i]
+		xn = [point.z[1], 0, 0, 0, point.z[2], 0]
+		Tn = 2 * point.z[3]
 
-    sol = Motion.CR3BP.build_solution(
-        μ, xn, 0.0, Tn, Vern9(); abstol = reltol = 1e-12
-    )
-    X = reduce(hcat, sol.(LinRange(0, Tn, 1000)))
+		sol = Motion.CR3BP.build_solution(
+			μ, xn, 0.0, Tn, Vern9(); abstol =  reltol = 1e-12 ,
+		)
+		X = reduce(hcat, sol.(LinRange(0, Tn, 1000)))
 
-    plot!(p, X[1, :], X[2, :], color = :black, linewidth = 0.5, label = false)
-end
+		plot!(p, X[1, :], X[2, :], color = :black, linewidth = 0.5, label = false)
+	end
 end
 p
+
+## save :)
+
+data = []
+
+xx = []
+pp = []
+qq = []
+for i in eachindex(history)
+	z = history[i].z
+	xn = [z[1], 0, 0, 0, z[2], 0]
+	Tn = 2 * z[3]
+
+	Φ = Motion.CR3BP.monodromy(
+		μ, x0, 0.0, Tn, Vern6();
+		abstol = 1e-10, reltol = 1e-10,
+	)
+    p, q = Motion.CR3BP.stability_index(Φ)
+
+    push!(xx, z[1])
+    push!(pp, p)
+    push!(qq, q)
+
+	push!(
+		data,
+		Dict(
+			:x => [z[1], 0, 0, 0, z[2], 0],
+			:T => 2*z[3],
+            :p => p, 
+            :q => q
+		),
+	)
+end
+
+## Plot 
+plot(xx, pp, framestyle=:box, ylim=(-2,2), label="p", xlabel="x (n.d)", ylabel="Stability Index")
+plot!(xx, qq, label="q")
