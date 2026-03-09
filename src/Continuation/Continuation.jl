@@ -16,10 +16,16 @@ export AbstractResidual, AbstractPredictor, AbstractPredictor
 export ContinuationPoint, nvar, ContinuationProblem, Corrector, solve
 include("problem.jl")
 
+export NewtonPolynomial
+include("utils.jl")
+
 export SimpleNaturalParameter
 include("natural_param.jl")
 
 export PseudoArcLength
 include("pseudo_arclen.jl")
+
+export PolynomialPredictor, stepsize, polynomial_degree
+include("polynomial.jl")
 
 end
