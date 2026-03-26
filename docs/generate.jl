@@ -23,4 +23,3 @@ for src in files
 	# Return relative path from docs/src
 	push!(GENERATED_FILES, joinpath("gen", base * ".md"))
 end
-

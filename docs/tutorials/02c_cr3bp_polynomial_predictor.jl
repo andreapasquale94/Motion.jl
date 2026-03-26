@@ -75,7 +75,7 @@ nat = ContinuationProblem(
 
 poly_sys = Continuation.SimpleNaturalParameterShootingResidual(sys, 1)
 predictor = PolynomialPredictor(
-	ds0 = 5e-4,
+	step0 = 5e-4,
 	hmin = 1e-4,
 	hmax = 1,
 	hfail = 1e-4,

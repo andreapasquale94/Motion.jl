@@ -14,6 +14,7 @@
 # into markdown/notebook.
 
 using LinearAlgebra
+using Serialization
 using SimpleNonlinearSolve
 using OrdinaryDiffEqVerner
 using StaticArrays
@@ -146,6 +147,14 @@ nsteps = 250
 for i ∈ 1:nsteps
     push!(history, Continuation.step!(prob, history; ds = Δs)[1])
 end
+
+# Store the results for later tutorials
+cache_path = joinpath(@__DIR__, "cache", "02_L1_lyap_natpar.jls")
+mkpath(dirname(cache_path))
+serialize(
+	cache_path,
+	history
+)
 
 # ## Plot the orbit family
 begin

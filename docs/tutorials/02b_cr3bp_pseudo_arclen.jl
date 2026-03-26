@@ -156,6 +156,23 @@ for i ∈ 1:nsteps
 	push!(history, Continuation.step!(palc, history; ds = Δs)[1])
 end;
 
+
+# Store the results for later tutorials
+cache_path = joinpath(@__DIR__, "cache", "02b_L1_lyap_palc.jls")
+mkpath(dirname(cache_path))
+serialize(
+	cache_path,
+	(
+		μ = μ,
+		decision = Vector{Float64}(sol.u),
+		N = N,
+		nx = nx,
+		nu = nu,
+		xstart = Vector{Float64}(Lp1),
+		xfinal = Vector{Float64}(Lp2),
+	),
+)
+
 # ## Plot the orbit family
 begin
 	p = plot(
