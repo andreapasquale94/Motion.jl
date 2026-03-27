@@ -15,6 +15,7 @@
 # into markdown/notebook.
 
 using LinearAlgebra
+using Serialization
 using SimpleNonlinearSolve
 using OrdinaryDiffEqVerner
 using StaticArrays

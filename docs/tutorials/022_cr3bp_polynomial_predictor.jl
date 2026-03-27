@@ -12,6 +12,7 @@
 #
 # The file is compatible with **Literate.jl**: it can be executed directly, or converted # to Markdown/Notebook as part of the docs build.
 using LinearAlgebra
+using Serialization
 using SimpleNonlinearSolve
 using OrdinaryDiffEqVerner
 using StaticArrays
