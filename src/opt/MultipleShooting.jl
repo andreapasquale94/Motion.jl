@@ -3,7 +3,7 @@ module MultipleShooting
 using StaticArrays
 using LinearAlgebra
 
-export indexes, variables, defects, objective
+export indexes, variables, defects, objective, control_normsq
 
 """
 	indexes(Val(N), Val(nx), Val(nu)) -> (it0, idt, iX, iU)
@@ -87,6 +87,28 @@ This function is allocation-free.
 		t  = __build_time_vector(vN, t0, dt)
 		return t0, dt, X, U, t
 	end
+end
+
+"""
+	control_normsq(vars, Val(N), Val(nx), Val(nu)) -> SVector{N-1,T}
+
+Return the squared 2-norm of each active segment control:
+
+`[‖u₁‖², ‖u₂‖², ..., ‖u_{N-1}‖²]`
+
+The terminal control `u_N` is excluded because it is not used by the one-sided
+multiple-shooting defects.
+"""
+function control_normsq(
+	vars::AbstractVector{T},
+	vN::Val{N},
+	vnx::Val{nx},
+	vnu::Val{nu},
+) where {T, N, nx, nu}
+	_, _, _, U, _ = variables(vars, vN, vnx, vnu)
+	return SVector{N-1, T}(ntuple(Val(N - 1)) do k
+		sum(abs2, @view U[:, k])
+	end)
 end
 
 """

@@ -24,6 +24,7 @@ using Motion
 using LinearAlgebra
 using OrdinaryDiffEqVerner
 using Plots
+using Serialization
 using StaticArrays
 
 using Optimization, OptimizationIpopt
@@ -268,6 +269,23 @@ sol = solve(prob,
 	);
 	maxiters = 1100,
 	verbose = 3
+);
+
+# ## Store the optimized decision vector for follow-on tutorials
+
+cache_path = joinpath(@__DIR__, "cache", "03_impulsive_transfer_seed.jls")
+mkpath(dirname(cache_path))
+serialize(
+	cache_path,
+	(
+		μ = μ,
+		decision = Vector{Float64}(sol.u),
+		N = N,
+		nx = nx,
+		nu = nu,
+		xstart = Vector{Float64}(Lp1),
+		xfinal = Vector{Float64}(Lp2),
+	),
 );
 
 # ## Plot the solution

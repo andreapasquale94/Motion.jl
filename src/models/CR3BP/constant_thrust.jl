@@ -9,7 +9,7 @@ CR3BP rotating-frame dynamics with *constant thrust acceleration*.
   - `p.acc`: acceleration specification
 """
 @fastmath function rhs_const_thrust(x::AbstractVector{T}, p::ComponentArray{<:Number}, t::Number) where T
-	dx = cr3bp_rhs(x, p, t)
+	dx = rhs(x, p, t)
 	a = __acceleration_to_cartesian(x, p.acc)
 	return SVector{6, T}(
 		dx[1], dx[2], dx[3],
@@ -36,11 +36,11 @@ end
 end
 
 @inline function __make_cr3bp_constant_thrust(
-	::Val{M}, μ::Number, xv0::SVector{6, T}, u, t0::Number, tf::Number,
+	::Val{M}, μ::Number, xv0::SVector{6, T}, u::AbstractVector, t0::Number, tf::Number,
 ) where {M, T}
 	acc = __acc_cr3bp_constant_thrust(Val(M), u, T)
 	p   = ComponentArray(μ = μ, acc = acc)
-	return ODEProblem(cr3bp_rhs_constant_thrust, xv0, (t0, tf), p)
+	return ODEProblem(rhs_const_thrust, xv0, (t0, tf), p)
 end
 
 """
@@ -59,7 +59,7 @@ Keyword
   - `:Cartesian`     → `u = (ax, ay, az)`
   - `:Spherical`     → `u = (r, ras, dec)` (RA/DEC in radians)
   - `:RTN`           → `u = (ar, at, an)` (RTN components)
-  - `:SphericalRTN`  → `u = (r, rtn_ras, rtn_dec)` (RTN spherical angles in radians)
+  - `:SphericalRTN`  → `u = (r, az, el)` (RTN spherical angles in radians)
 """
 function make_const_thrust(
 	μ::Number,
@@ -104,7 +104,7 @@ end
 
 
 """
-	build_solution_const_thrust(μ, x0, u0, t0, tf, alg; kwargs...) -> Solution
+	build_solution_const_thrust(μ, x0, u, t0, tf, alg; kwargs...) -> Solution
 
 Integrate CR3BP with constant thrust and return a Solution.
 """

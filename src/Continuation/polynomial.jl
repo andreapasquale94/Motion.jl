@@ -1,6 +1,6 @@
 """
-	PolynomialPredictor(; ds0, tangent0 = nothing, hmin = ds0 / 10, hmax = 10 * ds0,
-		hfail = ds0 / 2, dhmax = 2.0, max_degree = 4, err_abs = sqrt(eps(Float64)),
+	PolynomialPredictor(; step0, tangent0 = nothing, hmin = step0 / 10, hmax = 10 * step0,
+		hfail = step0 / 2, dhmax = 2.0, max_degree = 4, err_abs = sqrt(eps(Float64)),
 		err_rel = 1e-6)
 
 Adaptive Newton divided-difference predictor in the extended continuation space `(z, λ)`.
@@ -30,18 +30,18 @@ mutable struct PolynomialPredictor{T, VT <: Union{Nothing, Vector{T}}} <: Abstra
 end
 
 function PolynomialPredictor(;
-	ds0::Real,
+	step0::Real,
 	tangent0 = nothing,
-	hmin::Real = ds0 / 10,
-	hmax::Real = 10 * ds0,
-	hfail::Real = ds0 / 2,
+	hmin::Real = step0 / 10,
+	hmax::Real = 10 * step0,
+	hfail::Real = step0 / 2,
 	dhmax::Real = 2.0,
 	max_degree::Integer = 4,
 	err_abs::Real = sqrt(eps(Float64)),
 	err_rel::Real = 1e-6,
 )
 	T = promote_type(
-		typeof(float(ds0)),
+		typeof(float(step0)),
 		typeof(float(hmin)),
 		typeof(float(hmax)),
 		typeof(float(hfail)),
@@ -50,7 +50,7 @@ function PolynomialPredictor(;
 		typeof(float(err_rel)),
 	)
 
-	ds0T = T(ds0)
+	step0T = T(step0)
 	hminT = T(hmin)
 	hmaxT = T(hmax)
 	hfailT = T(hfail)
@@ -58,7 +58,7 @@ function PolynomialPredictor(;
 	err_absT = T(err_abs)
 	err_relT = T(err_rel)
 
-	ds0T > zero(T) || throw(ArgumentError("ds0 must be positive"))
+	step0T > zero(T) || throw(ArgumentError("step0 must be positive"))
 	hminT > zero(T) || throw(ArgumentError("hmin must be positive"))
 	hmaxT >= hminT || throw(ArgumentError("hmax must be at least hmin"))
 	hfailT > zero(T) || throw(ArgumentError("hfail must be positive"))
@@ -69,8 +69,8 @@ function PolynomialPredictor(;
 
 	tangent = tangent0 === nothing ? nothing : Vector{T}(tangent0)
 	return PolynomialPredictor{T, typeof(tangent)}(
-		ds0T,
-		ds0T,
+		step0T,
+		step0T,
 		tangent,
 		hminT,
 		hmaxT,

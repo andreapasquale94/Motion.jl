@@ -149,7 +149,7 @@ for i ∈ 1:nsteps
 end
 
 # Store the results for later tutorials
-cache_path = joinpath(@__DIR__, "cache", "02_L1_lyap_natpar.jls")
+cache_path = joinpath(@__DIR__, "cache", "020_L1_lyap_natpar.jls")
 mkpath(dirname(cache_path))
 serialize(
 	cache_path,
