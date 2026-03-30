@@ -273,7 +273,7 @@ sol = solve(prob,
 
 # ## Store the optimized decision vector for follow-on tutorials
 
-cache_path = joinpath(@__DIR__, "cache", "03_impulsive_transfer_seed.jls")
+cache_path = joinpath(@__DIR__, "cache", "100_impulsive_transfer_seed.jls")
 mkpath(dirname(cache_path))
 serialize(
 	cache_path,

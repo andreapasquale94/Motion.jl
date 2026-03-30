@@ -111,12 +111,26 @@ end;
 begin
 	cache_path = joinpath(@__DIR__, "cache", "031_L1_lyap_palc.jls")
 	mkpath(dirname(cache_path))
-	serialize(cache_path, history[1])
+	serialize(cache_path, 
+		(;
+			μ = μ, 
+			data = [
+				(; x = [p.z[1], 0, 0, 0, p.z[2], 0], T = 2*p.z[3]) for p in history[1]
+			]
+		)
+	)
 end
 begin
 	cache_path = joinpath(@__DIR__, "cache", "031_L2_lyap_palc.jls")
 	mkpath(dirname(cache_path))
-	serialize(cache_path, history[2])
+	serialize(cache_path, 
+		(;
+			μ = μ, 
+			data = [
+				(; x = [p.z[1], 0, 0, 0, p.z[2], 0], T = 2*p.z[3]) for p in history[2]
+			]
+		)
+	)
 end
 
 # ## Plot the orbit family
