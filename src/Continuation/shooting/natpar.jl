@@ -10,7 +10,7 @@ function residual(nat::NaturalParameterShootingResidual, z::AbstractVector, λ::
 end
 
 function step!(
-	cp::ContinuationProblem{<:Any, SimpleNaturalParameter, <:Any},
+	cp::ContinuationProblem{<:Any, <:SimpleNaturalParameter, <:Any},
 	history::Vector{ContinuationPoint{T}};
 	ds::Real,
 ) where {T}
