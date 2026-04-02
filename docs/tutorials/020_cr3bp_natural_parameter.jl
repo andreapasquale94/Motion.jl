@@ -16,9 +16,6 @@
 # 3. Run a natural-parameter continuation loop to trace a family of planar
 #    Lyapunov orbits around Earth–Moon L₁,
 # 4. Plot the resulting orbit family.
-#
-# *This file is compatible with **Literate.jl**: run it as a plain Julia script,
-# or convert it to Markdown / Jupyter with `Literate.markdown` or `Literate.notebook`.*
 
 using LinearAlgebra
 using Serialization
@@ -130,5 +127,5 @@ begin
 
 		plot!(p, X[1, :], X[2, :], color = :black, linewidth = 0.5, label = false)
 	end
-	p
 end
+display(p)

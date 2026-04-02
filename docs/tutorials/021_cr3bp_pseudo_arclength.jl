@@ -18,9 +18,6 @@
 # 1. Set up the same shooting residual used in the natural-parameter tutorial,
 # 2. Replace the predictor and constraint with a pseudo-arclength formulation,
 # 3. Trace the L₁ Lyapunov family with larger steps and fewer iterations.
-#
-# *This file is compatible with **Literate.jl**: run it as a plain Julia script,
-# or convert it to Markdown / Jupyter with `Literate.markdown` or `Literate.notebook`.*
 
 using LinearAlgebra
 using Serialization

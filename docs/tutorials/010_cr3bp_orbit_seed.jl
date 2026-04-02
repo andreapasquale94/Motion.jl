@@ -13,9 +13,6 @@
 #
 # The corrected orbit will serve as the starting point for the family continuation
 # in the next tutorial.
-#
-# *This file is compatible with **Literate.jl**: run it as a plain Julia script,
-# or convert it to Markdown / Jupyter with `Literate.markdown` or `Literate.notebook`.*
 
 using LinearAlgebra
 using Serialization
