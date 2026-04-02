@@ -7,7 +7,7 @@ end
 
 @inline function residual(c::Periodicity, x0, x, T, λ)
     r = pack(c.layout, x, T) - pack(c.layout, x0, T)
-    return r[1:end-1] # remove period
+    return is_free_T(c.layout) ? r[1:end-1] : r
 end
 
 struct HalfPeriodSymmetry <: AbstractConstraint

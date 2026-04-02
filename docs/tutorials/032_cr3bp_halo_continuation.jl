@@ -102,3 +102,9 @@ begin
 	end
 	p
 end
+
+cache_path = joinpath(@__DIR__, "cache", "032_L1_SHalo.jls")
+	mkpath(dirname(cache_path))
+	serialize(cache_path,
+		(; μ = μ, data = [Continuation.unpack(layout, p.z) for p in history] )
+) # hide
