@@ -74,6 +74,43 @@ end
 	)'
 end
 
+function rhs_stm(x::AbstractVector{T}, p::ComponentArray{<:Number}, t) where T
+	μ  = T(getproperty(p, :μ))
+    # State transition matrix
+    Φ = reshape(@view(x[7:end]), Size(6, 6))
+    # Compute state derivative
+    δx = rhs(x, p, t)
+    # Compute jacobian
+    J = jacobian(x, μ)
+    # Compute stm derivative
+    δΦ = J * Φ
+    return vcat(δx, reshape(δΦ, Size(36)))
+end
+
+"""
+	jacobi_constant(x, μ) -> T
+
+Return the CR3BP Jacobi constant for rotating-frame state
+`x = [px, py, pz, vx, vy, vz]` and mass parameter `μ`.
+"""
+@fastmath function jacobi_constant(x::AbstractVector{T}, μ::Number) where {T}
+	μT = T(μ)
+	μ1 = one(T) - μT
+
+	@inbounds begin
+		px, py, pz = x[1], x[2], x[3]
+		vx, vy, vz = x[4], x[5], x[6]
+
+		px1 = px + μT
+		px2 = px - μ1
+
+		r1 = sqrt(px1*px1 + py*py + pz*pz)
+		r2 = sqrt(px2*px2 + py*py + pz*pz)
+
+		vsq = vx*vx + vy*vy + vz*vz
+		return px*px + py*py + 2*(μ1/r1 + μT/r2) - vsq
+	end
+end
 
 # --- Make
 

@@ -76,7 +76,7 @@ z0 = [x0[1], x0[5], T0/2]
 # points. Each `ContinuationPoint` bundles the reduced state `z` with the current
 # value of the continuation parameter `λ`. The predictor uses this history to
 # compute the tangent direction for the next step.
-history = ContinuationPoint{Float64}[ContinuationPoint{Float64}(z0, z0[1]),]
+history = ContinuationPoint{Float64}[ContinuationPoint{Float64}(z0, 0.0),]
 
 # ### Continuation problem
 #
@@ -102,12 +102,18 @@ prob = ContinuationProblem(
 # natural-parameter continuation without losing convergence. Here we use
 # `Δs = 5e-2` (compare with `2e-4` in the previous tutorial) and need only
 # 50 steps to cover a comparable portion of the family.
-Δs = 5e-2
-nsteps = 50
+Δs = 1e-2
+nsteps = 300
 
 for i ∈ 1:nsteps
 	push!(history, Continuation.step!(prob, history; ds = Δs)[1])
 end
+
+cache_path = joinpath(@__DIR__, "cache", "021_L1_Lyap.jls")
+	mkpath(dirname(cache_path))
+	serialize(cache_path,
+		(; μ = μ, data = [Continuation.unpack(layout, p.z) for p in history] )
+) # hide
 
 # ## Plot the orbit family
 begin

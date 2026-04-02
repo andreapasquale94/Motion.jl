@@ -10,5 +10,6 @@ using SciMLBase: EnsembleProblem, EnsembleThreads
 using ..Motion: Solution
 
 include("base.jl")
+include("stability.jl")
 
 end
