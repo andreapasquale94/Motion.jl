@@ -68,8 +68,8 @@ prob = ContinuationProblem(
 )
 
 # ## Run the continuation
-Δs = 1e-2
-nsteps = 300
+Δs = 5e-3
+nsteps = 400
 
 for i ∈ 1:nsteps
 	push!(history, Continuation.step!(prob, history; ds = Δs)[1])

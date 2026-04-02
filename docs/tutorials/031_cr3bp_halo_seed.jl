@@ -66,7 +66,7 @@ vi = real(W[:, 2] / norm(W[:, 2]))
 # - start on the xz-plane: `y = 0`
 # - perpendicular crossing: `vₓ = vz = 0`
 # - free components: `x`, `z`, `vy`
-x0g = X[:, bif_idx] + 1e-4 * vi
+x0g = X[:, bif_idx] + 1e-3 * vi
 x0 = [x0g[1], 0, x0g[3], 0, x0g[5], 0]
 T0 = 2T[bif_idx]
 
