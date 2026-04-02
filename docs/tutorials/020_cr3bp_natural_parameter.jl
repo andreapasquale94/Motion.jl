@@ -130,5 +130,5 @@ begin
 
 		plot!(p, X[1, :], X[2, :], color = :black, linewidth = 0.5, label = false)
 	end
+	p
 end
-p

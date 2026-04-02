@@ -114,6 +114,12 @@ z0 = [x0[1], x0[5], T0]
 corr = Continuation.SciMLCorrector(SimpleNewtonRaphson(); abstol =  reltol=1e-10 , verbose = false);
 zsol, stat = solve(r, corr, z0, z0[1]);
 
+cache_path = joinpath(@__DIR__, "cache", "010_L1_Lyap_seed.jls")
+	mkpath(dirname(cache_path))
+	serialize(cache_path,
+		(; μ = μ, x = xn, T = Tn )
+) # hide
+
 # ## Plot the initial guess vs the corrected orbit
 
 # Integrate the linearized seed over one period:
@@ -134,10 +140,3 @@ begin
 	plot!(p, X_guess[1, :], X_guess[2, :], color = :red, style = :dot, label = "Initial guess")
 	plot!(p, X[1, :], X[2, :], color = :black, label = "Corrected orbit")
 end
-
-## hideall
-cache_path = joinpath(@__DIR__, "cache", "010_L1_Lyap_seed.jls")
-	mkpath(dirname(cache_path))
-	serialize(cache_path,
-		(; μ = μ, x = xn, T = Tn )
-	)
