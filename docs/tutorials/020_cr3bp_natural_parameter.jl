@@ -94,7 +94,7 @@ history = ContinuationPoint{Float64}[ContinuationPoint{Float64}(z0, z0[1]),]
 prob = ContinuationProblem(
 	sr;
 	predictor = SimpleNaturalParameter(1, -1),
-	corrector = Continuation.SciMLCorrector(; abstol =  reltol=1e-12 ),
+	corrector = Continuation.SciMLCorrector(; abstol =  reltol=1e-10 ),
 )
 
 # ## Run the continuation

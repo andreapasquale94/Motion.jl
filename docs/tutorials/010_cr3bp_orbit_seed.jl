@@ -111,7 +111,7 @@ r = NaturalParameterShootingResidual(sr, 1);
 # Pack the initial guess into the reduced vector `z₀ = [x, vy, T]` and
 # solve the resulting nonlinear system with Newton–Raphson:
 z0 = [x0[1], x0[5], T0]
-corr = Continuation.SciMLCorrector(SimpleNewtonRaphson(); abstol =  reltol=1e-10 , verbose = false);
+corr = Continuation.SciMLCorrector(; abstol =  reltol=1e-10 , verbose = false);
 zsol, stat = solve(r, corr, z0, z0[1]);
 
 cache_path = joinpath(@__DIR__, "cache", "010_L1_Lyap_seed.jls")
