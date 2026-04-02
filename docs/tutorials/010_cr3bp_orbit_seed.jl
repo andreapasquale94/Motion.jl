@@ -114,12 +114,6 @@ z0 = [x0[1], x0[5], T0]
 corr = Continuation.SciMLCorrector(; abstol =  reltol=1e-10 , verbose = false);
 zsol, stat = solve(r, corr, z0, z0[1]);
 
-cache_path = joinpath(@__DIR__, "cache", "010_L1_Lyap_seed.jls")
-	mkpath(dirname(cache_path))
-	serialize(cache_path,
-		(; μ = μ, x = xn, T = Tn )
-) # hide
-
 # ## Plot the initial guess vs the corrected orbit
 
 # Integrate the linearized seed over one period:
@@ -130,6 +124,12 @@ X_guess = reduce(hcat, sol_guess.(LinRange(0, T0, 1000)));
 xn, Tn = Continuation.unpack(layout, zsol)
 sol = Motion.CR3BP.build_solution(μ, xn, 0.0, Tn, Vern9(); abstol =  reltol=1e-14 )
 X = reduce(hcat, sol.(LinRange(0, Tn, 1000)));
+
+cache_path = joinpath(@__DIR__, "cache", "010_L1_Lyap_seed.jls")
+	mkpath(dirname(cache_path))
+	serialize(cache_path,
+		(; μ = μ, x = xn, T = Tn )
+) # hide
 
 # The corrected orbit (black) closes on itself, while the linearized seed (red,
 # dotted) visibly drifts — demonstrating why the differential correction step
