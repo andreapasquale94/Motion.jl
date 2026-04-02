@@ -109,11 +109,8 @@ end
 # ## Plot the orbit family
 begin
 	p = plot(
-		framestyle = :box,
+		framestyle = :box, aspect_ratio = 1, legend = :bottomright, dpi = 200,
 		xlabel = "x (-)", ylabel = "y (-)",
-		aspect_ratio = 1,
-		legend = :bottomright,
-		dpi = 200,
 	)
 
 	for i in 1:50:length(history)
@@ -124,7 +121,6 @@ begin
 			μ, xn, 0.0, 2Tn, Vern9(); abstol =  reltol = 1e-14 ,
 		)
 		X = reduce(hcat, sol.(LinRange(0, 2Tn, 1000)))
-
 		plot!(p, X[1, :], X[2, :], color = :black, linewidth = 0.5, label = false)
 	end
 end
