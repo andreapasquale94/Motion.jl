@@ -2,30 +2,23 @@ module Continuation
 
 using LinearAlgebra
 using SciMLBase: SciMLBase
+using NonlinearSolve
 
-export SingleShootingLayout, VarMap, ReducedLayout, unpack
-include("layout.jl")
-
-export AbstractConstraint, constraint!, GenericConstraint, HalfPeriodSymmetry, Periodicity
-include("constraints.jl")
-
-export ShootingArc, SingleShootingResidual
-include("shooting.jl")
-
-export AbstractResidual, AbstractPredictor, AbstractPredictor
-export ContinuationPoint, nvar, ContinuationProblem, Corrector, solve
+export ContinuationProblem, ContinuationPoint
 include("problem.jl")
 
-export NewtonPolynomial
-include("utils.jl")
-
 export SimpleNaturalParameter
-include("natural_param.jl")
+include("napar.jl")
 
-export PseudoArcLength
-include("pseudo_arclen.jl")
+export SciMLCorrector
+include("corrector.jl")
 
-export PolynomialPredictor, stepsize, polynomial_degree
-include("polynomial.jl")
+export SingleShootingLayout, SingleShootingReducedLayout, SingleShooting, SingleShootingResidual
+include("shooting/layout.jl")
+include("shooting/constraints.jl")
+include("shooting/model.jl")
+
+export NaturalParameterShootingResidual
+include("shooting/natpar.jl")
 
 end

@@ -6,28 +6,19 @@ using ComponentArrays
 
 using SciMLBase: ODEProblem, ContinuousCallback, remake, solve
 using SciMLBase: EnsembleProblem, EnsembleThreads
-
-include("root.jl")
+using NonlinearSolve
 
 export Solution, SensitivitySolution, BatchSolution
 include("solution.jl")
 
-export libration_points
-include("models/libration_points.jl")
+export libration_points, libration_point
+include("libration_points.jl")
 
 export compute_stretch
-include("models/measures.jl")
-include("models/utils.jl")
+include("measures.jl")
 
-# Models
-include("models/CR3BP/CR3BP.jl")
-include("models/ER3BP/ER3BP.jl")
-include("models/BCR4BP/BCR4BP.jl")
+include("CR3BP/CR3BP.jl")
 
-# Optimisation modules
-include("opt/MultipleShooting.jl")
-
-# Continuation
 include("Continuation/Continuation.jl")
 
 end

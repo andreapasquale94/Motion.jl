@@ -2,39 +2,26 @@ abstract type AbstractPredictor end
 
 abstract type AbstractCorrector end
 
-struct Corrector{ALG, KW} <: AbstractCorrector 
-	alg::ALG
-	kwargs::KW
-end
-Corrector(alg; kwargs...) = Corrector(alg, (; kwargs...))
-
-struct CorrectorStats
-	success::Bool
-	residuals::Vector{Float64}
-end
-
-function SciMLBase.solve(sys::AbstractResidual, corr::Corrector, z0::Vector{T}, λ) where {T}
-	func! = (out, z, _) -> residual!(out, sys, z, λ)
-	prob = SciMLBase.NonlinearProblem(func!, z0)
-	sol = SciMLBase.solve(prob, corr.alg; corr.kwargs...)
-	znew = Vector{T}(sol.u)
-	stats = CorrectorStats(SciMLBase.successful_retcode(sol), sol.resid)
-	return znew, stats
-end
-
-struct ContinuationProblem{SYS, PR, CR}
-	sys::SYS
-	predictor::PR
-	corrector::CR
-end
-
-function ContinuationProblem(sys::AbstractResidual;
-	predictor::AbstractPredictor = PseudoArcLength(),
-	corrector::AbstractCorrector)
-	return ContinuationProblem{typeof(sys), typeof(predictor), typeof(corrector)}(sys, predictor, corrector)
-end
+abstract type AbstractResidual end
 
 struct ContinuationPoint{T}
 	z::Vector{T}
 	λ::T
 end
+
+struct ContinuationProblem{R <: AbstractResidual, PR <: AbstractPredictor, CR <: AbstractCorrector}
+	sys::R
+	pre::PR
+	corr::CR
+end
+
+function ContinuationProblem(r::AbstractResidual;
+	predictor::AbstractPredictor,
+	corrector::AbstractCorrector = SciMLCorrector(SimpleNewtonRaphson(), reltol =  abstol=1e-12 ))
+	return ContinuationProblem{typeof(r), typeof(predictor), typeof(corrector)}(r, predictor, corrector)
+end
+
+
+function predict end
+
+function step! end

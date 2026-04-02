@@ -1,17 +1,24 @@
-# # CR3BP: Natural-parameter continuation for planar Lyapunov families
+# # CR3BP: Natural-Parameter Continuation for Lyapunov Families
 #
-# This tutorial demonstrates **natural-parameter continuation** for a family of planar Lyapunov-like periodic 
-# orbits in the CR3BP using `Motion.Continuation` module.
+# Periodic orbits in the CR3BP come in **one-parameter families**: once a single
+# member is known (e.g. from the seeding tutorial), neighbouring members can be
+# found by slowly varying a parameter and correcting at each step. This process
+# is called **numerical continuation**.
 #
-# We will:
+# The simplest variant is **natural-parameter continuation**, where we march along
+# a physical quantity — here the initial x-position `x(0)` — taking small steps
+# and re-solving the shooting problem at each one.
 #
-# 1. Seed a small periodic orbit near **L₁** using the Jacobian eigen-structure,
-# 2. Formulate a **single-shooting residual** with a **half-period symmetry** constraint,
-# 3. Run a continuation loop where the **natural parameter** is the initial x-position `x[1]`,
+# This tutorial demonstrates how to:
+#
+# 1. Load the seed orbit computed in the previous tutorial,
+# 2. Set up a **single-shooting residual** with a **half-period symmetry** constraint,
+# 3. Run a natural-parameter continuation loop to trace a family of planar
+#    Lyapunov orbits around Earth–Moon L₁,
 # 4. Plot the resulting orbit family.
 #
-# The file is compatible with **Literate.jl**: it can be executed as-is, or converted
-# into markdown/notebook.
+# *This file is compatible with **Literate.jl**: run it as a plain Julia script,
+# or convert it to Markdown / Jupyter with `Literate.markdown` or `Literate.notebook`.*
 
 using LinearAlgebra
 using Serialization
@@ -23,162 +30,106 @@ using Plots
 using Motion
 using Motion.Continuation
 
-# ## Seed setup
-const μ = 0.012150584269940356
+# ## Load seed data
+#
+# We deserialize the corrected orbit from the first tutorial. This gives us a
+# validated initial condition `x₀` and period `T₀` to start the continuation from.
+const seed_data = deserialize(joinpath(@__DIR__, "cache", "010_L1_Lyap_seed.jls"))
 
-LPs = Motion.libration_points(μ)
-xLP = LPs[1]                      # L₁
-JLP = Motion.CR3BP.jacobian(xLP, μ)
-L, W = eigen(JLP);
+const μ = seed_data.μ
+x0 = seed_data.x
+T0 = seed_data.T
 
-# ## Linear seed near L₁ (center direction)
+# ## Continuation setup
 #
-# We move a small distance along a center eigenvector direction, then impose planar symmetry.
-x0g = xLP + 0.02 * real(W[:, 5] / norm(W[:, 5]));
+# ### Reduced layout
+#
+# As in the seeding tutorial, we work with a reduced state vector `z = [x, vy, T]`
+# containing only the free components. The full 6D state is reconstructed by the
+# layout when needed (all fixed components default to zero, which is consistent
+# with the planar Lyapunov symmetry).
+layout = SingleShootingReducedLayout(6, [1, 5], true);
 
-# Planar initial condition: y=z=vx=vz=0 and vy free (seeded from eigenvector here).
-x0 = [x0g[1], 0, 0, 0, x0g[5], 0]
-
-# Period guess from the center eigenvalue
-T0 = 2π / abs(L[5])
-# ## Reduced decision variables and half-period shooting
+# ### Shooting residual with half-period symmetry
 #
-# For planar Lyapunov orbits we can exploit symmetry:
+# This time we use the **half-period symmetry** constraint instead of the
+# full-period periodicity used in the seed tutorial. Because planar Lyapunov
+# orbits are symmetric about the x-axis, it suffices to integrate for only
+# *half* a period and require:
 #
-# - If we start on the x-axis (y(0)=0) with vₓ(0)=0,
-#   then periodicity can be enforced by requiring at **half-period**:
-#     y(T/2) = 0 and vₓ(T/2) = 0
+# - `y(T/2) = 0`   — the trajectory returns to the x-axis,
+# - `vₓ(T/2) = 0`  — it crosses perpendicularly.
 #
-# This means we can solve a 2D boundary-value condition with a low-dimensional `z`.
-#
-# Here we choose reduced variables:
-#
-#   z = [ x[1], vᵧ(0), T/2 ]
-#
-# and rebuild the full state as:
-#
-#   x_full(0) = [ z[1], 0, 0, 0, z[2], 0 ]
-#   half-period = z[3]
-#
-# In Motion's continuation stack:
-# - `SingleShootingLayout(6)` encodes a full state dimension 6
-# - `VarMap(7, [1, 5, 7])` selects which entries of `[x0; T]` are *active* in the reduced vector:
-#     1 → x[1]
-#     5 → vᵧ(0)
-#     7 → T
-#
-# Note: we store T/2 as our third reduced variable, so we will interpret it accordingly later.
-layout = ReducedLayout(
-    SingleShootingLayout(6),
-    VarMap(7, [1, 5, 7]),
-    vcat(x0, T0),
-)
-
-# Flow map: propagate from t=0 to t=T (or T/2, depending on the arc object)
-flow = (x, T, λ) -> Motion.CR3BP.flow(
-    μ, x, 0.0, T, Vern9(); abstol = reltol = 1e-12
+# This halves the integration time and often improves convergence.
+f(x, T, λ) = Motion.CR3BP.flow(μ, x, 0.0, T, Vern9(); abstol =  reltol=1e-14 );
+sr = SingleShootingResidual(
+	SingleShooting(f, layout), Continuation.HalfPeriodSymmetry([2, 4]),
 );
 
-# ## Residual definition
+# ### Initial reduced state
 #
-# `ShootingArc(flow, layout)` defines how to build a shooting segment from reduced
-# variables to the full trajectory.
-#
-# `HalfPeriodSymmetry((2,4))` enforces the half-period conditions on components:
-#
-# - index 2 = y
-# - index 4 = vₓ
-#
-# Combined into a single residual model:
-sys = SingleShootingResidual(
-    ShootingArc(flow, layout), HalfPeriodSymmetry((2, 4)),
-)
+# Since we are using the half-period constraint, the reduced state stores the
+# *half*-period rather than the full period:
+# - `z[1] = x(0)`
+# - `z[2] = vy(0)`
+# - `z[3] = T/2`
+z0 = [x0[1], x0[5], T0/2]
 
-# Initial reduced guess
+# ### Continuation history
 #
-# We set:
-# - z[1] = x[1]
-# - z[2] = vᵧ(0)
-# - z[3] = T/2
-zinit = [x0[1], x0[5], T0/2]
+# The continuation algorithm maintains a **history stack** of previously converged
+# points. Each `ContinuationPoint` bundles the reduced state `z` with the current
+# value of the continuation parameter `λ` (here `λ = x(0)`). The predictor uses
+# this history to extrapolate an initial guess for the next step.
+history = ContinuationPoint{Float64}[ContinuationPoint{Float64}(z0, z0[1]),]
 
-# ## Corrector
+# ### Continuation problem
 #
-# Continuation steps use a predictor (here natural parameter) and a corrector
-# (Newton) to land back on the solution manifold.
-corr = Corrector(
-    SimpleNewtonRaphson(); abstol = reltol = 1e-10, verbose = true
-)
-
-# ## Continuation problem
+# A `ContinuationProblem` ties together three components:
 #
-# Natural parameter continuation means we pick one component as a "parameter"
-# and step it directly. Here, we use:
-#
-# `SimpleNaturalParameter(1)` → the first reduced variable, i.e. `x[1]`,
-# is treated as the continuation parameter.
-#
-# At each step:
-# - predictor proposes a new `x[1]` (and keeps the other components as previous),
-# - corrector solves for the remaining unknowns so the residual is zero again.
+# - **System** (`sr`): the shooting residual that encodes the dynamics and constraints,
+# - **Predictor** (`SimpleNaturalParameter`): generates an initial guess for the next
+#   point by incrementing `z[1]` (the x-position) by a fixed step `ds`,
+# - **Corrector**: a Newton-based solver that refines the prediction
+#   until the residual is below tolerance.
 prob = ContinuationProblem(
-    sys;
-    predictor = SimpleNaturalParameter(1),
-    corrector = corr,
+	sr;
+	predictor = SimpleNaturalParameter(1, -1),
+	corrector = Continuation.SciMLCorrector(; abstol =  reltol=1e-12 ),
 )
-
-# ## Initialization of history
-#
-# The continuation stack stores a `ContinuationPoint(z, λ)`.
-history = ContinuationPoint{Float64}[
-    ContinuationPoint{Float64}(zinit, zinit[1])
-]
-
-# Warm-start: do a zero step to ensure the first point is corrected tightly.
-push!(history, Continuation.step!(prob, history; ds = 0)[1])
-popfirst!(history)
 
 # ## Run the continuation
 #
-# We take small steps in x[1].
-Δs = 1e-4
-nsteps = 250
+# We march in the direction of *decreasing* `x(0)` (note `sign = -1` in the
+# predictor above), taking 500 steps of size `Δs`. At each step,
+# `Continuation.step!` predicts, corrects, and returns the new converged point.
+Δs = 2e-4
+nsteps = 500
 
 for i ∈ 1:nsteps
-    push!(history, Continuation.step!(prob, history; ds = Δs)[1])
+	push!(history, Continuation.step!(prob, history; ds = Δs)[1])
 end
-
-# Store the results for later tutorials
-cache_path = joinpath(@__DIR__, "cache", "020_L1_lyap_natpar.jls")
-mkpath(dirname(cache_path))
-serialize(
-	cache_path,
-	history
-)
 
 # ## Plot the orbit family
 begin
-p = plot(
-    framestyle = :box,
-    xlabel = "x (-)", ylabel = "y (-)",
-    aspect_ratio = 1,
-    legend = :bottomright,
-    dpi = 200,
-)
+	p = plot(
+		framestyle = :box,
+		xlabel = "x (-)", ylabel = "y (-)",
+		aspect_ratio = 1,
+		legend = :bottomright,
+		dpi = 200,
+	)
 
-scatter!(p, [xLP[1]], [xLP[2]], label = false, marker = :d, color = :red)
+	for i in 1:50:length(history)
+		point = history[i]
+		xn, Tn = Continuation.unpack(layout, point.z)
 
-for i in 1:10:nsteps
-    point = history[i]
-    xn = [point.z[1], 0, 0, 0, point.z[2], 0]
-    Tn = 2 * point.z[3]
+		sol = Motion.CR3BP.build_solution(
+			μ, xn, 0.0, 2Tn, Vern9(); abstol =  reltol = 1e-14 ,
+		)
+		X = reduce(hcat, sol.(LinRange(0, 2Tn, 1000)))
 
-    sol = Motion.CR3BP.build_solution(
-        μ, xn, 0.0, Tn, Vern9(); abstol = reltol = 1e-12
-    )
-    X = reduce(hcat, sol.(LinRange(0, Tn, 1000)))
-
-    plot!(p, X[1, :], X[2, :], color = :black, linewidth = 0.5, label = false)
-end
+		plot!(p, X[1, :], X[2, :], color = :black, linewidth = 0.5, label = false)
+	end
 end
 p

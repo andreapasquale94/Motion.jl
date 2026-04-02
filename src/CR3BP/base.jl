@@ -34,29 +34,50 @@ Parameters:
 	end
 end
 
-function rhs_stm(x::AbstractVector{T}, p::ComponentArray{<:Number}, t) where T
-	μ  = T(getproperty(p, :μ))
-    # State transition matrix
-    Φ = reshape(@view(x[7:end]), Size(6, 6))
-    # Compute state derivative
-    δx = rhs(x, p, t)
-    # Compute jacobian
-    J = jacobian(x, μ)
-    # Compute stm derivative
-    δΦ = J * Φ
-    return vcat(δx, reshape(δΦ, Size(36)))
+@fastmath function jacobian(x::AbstractVector{T}, μ::Number) where T
+	@inbounds px, py, pz = x[1], x[2], x[3]
+
+	px1 = px+μ
+	px2 = px-1+μ
+
+	tmp = py*py + pz*pz
+	r₁ = sqrt(px1*px1 + tmp)
+	r₂ = sqrt(px2*px2 + tmp)
+
+	r₁² = r₁*r₁
+	r₂² = r₂*r₂
+	r₁³ = r₁²*r₁
+	r₂³ = r₂²*r₂
+
+	f₁3 = (1-μ)/r₁³
+	f₂3 = μ/r₂³
+	f₁5 = f₁3/r₁²
+	f₂5 = f₂3/r₂²
+
+	tmp = f₁5 + f₂5
+	uxx = 1.0 - f₁3 - f₂3 + 3*px1*px1*f₁5 + 3*px2*px2*f₂5
+	uyy = 1.0 - f₁3 - f₂3 + 3*py*py*tmp
+	uzz = - f₁3 - f₂3 + 3*pz*pz*tmp
+
+	uyz = 3*py*pz*tmp
+	tmp = px1*f₁5 + px2*f₂5
+	uxy = 3*py*tmp
+	uxz = 3*pz*tmp
+
+	return SMatrix{6, 6, T}(
+		0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+		0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+		0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+		uxx, uxy, uxz, 0.0, 2.0, 0.0,
+		uxy, uyy, uyz, -2.0, 0.0, 0.0,
+		uxz, uyz, uzz, 0.0, 0.0, 0.0,
+	)'
 end
 
 
 # --- Make
 
-"""
-	make(μ, x0, t0, tf) -> ODEProblem
-
-Build an `ODEProblem` for CR3BP with parameters stored in a `ComponentArray(μ=...)`.
-Promotes `(μ, x0, t0, tf)` to a common scalar type for consistency.
-"""
-function make(μ::Number, x0::AbstractVector{<:Number}, t0::Number, tf::Number)
+function make_ode_problem(μ::Number, x0::AbstractVector{<:Number}, t0::Number, tf::Number)
 	length(x0) == 6 || throw(ArgumentError("expected state of length 6, got $(length(x0))"))
 	T = promote_type(typeof(μ), eltype(x0), typeof(t0), typeof(tf))
 	x0v = @inbounds SVector{6, T}(x0[1], x0[2], x0[3], x0[4], x0[5], x0[6])
@@ -74,9 +95,9 @@ Integrate CR3BP and return the final state `x(tf)`.
 """
 function flow(
 	μ::Number, x0::AbstractVector{<:Number}, t0::Number, tf::Number, alg;
-	reltol = 1e-12, abstol = 1e-12, kwargs...,
+	reltol = 1e-14, abstol = 1e-14, kwargs...,
 )
-	prob = make(μ, x0, t0, tf)
+	prob = make_ode_problem(μ, x0, t0, tf)
 	sol  = solve(prob, alg; save_everystep = false, reltol = reltol, abstol = abstol, kwargs...)
 	return sol.u[end]
 end
@@ -84,16 +105,16 @@ end
 # --- Solve 
 
 """
-    build_solution(μ, x0, t0, tf, alg; kwargs...) -> Solution
+	build_solution(μ, x0, t0, tf, alg; kwargs...) -> Solution
 
 Integrate CR3BP and return a Solution.
 """
 function build_solution(
-    μ::Number, x0::AbstractVector{<:Number}, t0::Number, tf::Number, alg;
-    kwargs...,
+	μ::Number, x0::AbstractVector{<:Number}, t0::Number, tf::Number, alg;
+	reltol = 1e-14, abstol = 1e-14, kwargs...,
 )
-    prob = make(μ, x0, t0, tf)
-    sol  = solve(prob, alg; kwargs...)
-    return Solution(sol, t0, tf, sol.u[1], sol.u[end])
+	prob = make_ode_problem(μ, x0, t0, tf)
+	sol  = solve(prob, alg; reltol = reltol, abstol = abstol, kwargs...)
+	return Solution(sol, t0, tf, sol.u[1], sol.u[end])
 end
 

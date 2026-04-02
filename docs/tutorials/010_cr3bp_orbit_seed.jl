@@ -1,15 +1,24 @@
-# # CR3BP: Lyapunov family seeding
+# # CR3BP: Lyapunov Orbit Seeding
 #
-# This tutorial shows how to:
+# In the Circular Restricted Three-Body Problem (CR3BP), **Lyapunov orbits** are planar
+# periodic orbits that exist around the collinear libration points (L₁, L₂, L₃). Finding
+# them numerically requires two ingredients: a good initial guess and a differential
+# corrector to refine it.
 #
-# 1. pick a libration point (L₁ by default),
-# 2. build a **linearized center-manifold seed** (a Lyapunov-like initial guess),
-# 3. refine it into a periodic orbit with a **single–shooting corrector**
+# This tutorial walks through both steps for the Earth–Moon L₁ point:
 #
-# The code is written to be compatible with **Literate.jl**: run it as a normal Julia
-# script, or convert it to Markdown/Notebook with Literate.
+# 1. Compute the **libration point** and its local eigen-structure,
+# 2. Build a **linearized seed** from the center-manifold direction,
+# 3. Refine the seed into a periodic orbit with a **single-shooting corrector**.
+#
+# The corrected orbit will serve as the starting point for the family continuation
+# in the next tutorial.
+#
+# *This file is compatible with **Literate.jl**: run it as a plain Julia script,
+# or convert it to Markdown / Jupyter with `Literate.markdown` or `Literate.notebook`.*
 
 using LinearAlgebra
+using Serialization
 using SimpleNonlinearSolve
 using OrdinaryDiffEqVerner
 using StaticArrays
@@ -18,80 +27,118 @@ using Plots
 using Motion
 using Motion.Continuation
 
-# ## Problem setup
-const μ = 0.012150584269940356
+# ## System parameters
+#
+# The CR3BP is fully characterized by the mass ratio `μ = m₂/(m₁ + m₂)`.
+# Here we use the Earth–Moon value:
+const μ = 1.215058560962404e-2
 
-# Libration points (L₁, L₂, L₃, L₄, L₅):
-LPs = Motion.libration_points(μ)
-
-# Pick L₁ as the seed location:
-xLP = LPs[1];
-
-# Jacobian of the CR3BP vector field at the libration point:
+# ## Libration point and eigen-structure
+#
+# The collinear libration points are equilibria of the CR3BP equations of motion.
+# We compute L₁ and evaluate the Jacobian of the vector field there:
+xLP = Motion.libration_point(μ, Val(:L1))
 JLP = Motion.CR3BP.jacobian(xLP, μ);
 
-# Eigen-structure (stable/unstable/center directions):
+# The eigenvalues of this 6×6 Jacobian come in three pairs: one real pair
+# (saddle — stable/unstable manifolds), one purely imaginary pair (in-plane center
+# — Lyapunov family), and one purely imaginary pair (out-of-plane center — vertical family).
+# The eigenvectors associated with the imaginary eigenvalues span the **center manifold**,
+# which is where periodic orbit families originate.
 L, W = eigen(JLP)
 
-# ## A linearized Lyapunov seed (center manifold direction)
+# ## Linearized Lyapunov seed
 #
-# For planar Lyapunov orbits around L₁/L₂, a standard seed is a small displacement
-# along one of the **center** eigenvectors (purely imaginary eigenvalues), and then
-# we enforce the planar symmetry (`y=z=ẏ=ż=0` initially).
-x0g = xLP + 0.1 * real(W[:, 5] / norm(W[:, 5]));
+# A small displacement along a center eigenvector (one with a purely imaginary
+# eigenvalue) produces an approximate periodic orbit — the *linearized seed*.
+# We take a unit-normalized eigenvector and scale it by a small amplitude `ε`:
+x0g = xLP + 1e-3 * real(W[:, 2] / norm(W[:, 2]));
 
-# Impose planar symmetry:
-# - start on the x-axis (`y=z=0`)
-# - start with `vx=ż=0`
-# - leave vy free (we'll correct it)
+# Planar Lyapunov orbits are symmetric about the x-axis. A trajectory that
+# **crosses the x-axis perpendicularly** (y = 0, vₓ = 0) will, by symmetry, cross it
+# perpendicularly again after half a period. We therefore keep only `x` and `vy`
+# from the eigenvector displacement, zeroing out the rest:
 x0 = [x0g[1], 0, 0, 0, x0g[5], 0]
 
-# Linearized period guess from the imaginary eigenvalue:
-T0 = 2π / abs(L[5])
+# The imaginary part of the corresponding eigenvalue gives the linear oscillation
+# frequency, so `2π / |Im(λ)|` is our first guess for the period:
+T0 = 2π / abs(L[2])
 
-# ## Single–shooting correction (two unknowns → two constraints)
+# ## Single-shooting correction
 #
-# A planar Lyapunov orbit has a symmetry that lets us enforce periodicity with *two scalar constraints*, typically:
+# The linearized seed is only approximate — it satisfies the *linear* equations of
+# motion, not the full nonlinear CR3BP. A **single-shooting corrector** iteratively
+# adjusts the initial conditions (and possibly the period) until the trajectory
+# closes on itself to machine precision.
 #
+# Because we only vary a subset of the full state, we define a **reduced layout**:
+# out of the 6 state components `[x, y, z, vₓ, vy, vz]`, only `x` (index 1) and
+# `vy` (index 5) are free; the period `T` is also free. This gives a reduced
+# state vector `z = [x, vy, T]` of dimension 3.
+layout = SingleShootingReducedLayout(6, [1, 5], true);
+
+# ### Choosing a constraint
+#
+# A planar Lyapunov orbit's symmetry lets us enforce periodicity with only
+# **two scalar constraints** (matching the two free state components). Two
+# equivalent formulations exist:
+#
+# **Half-period symmetry** — require the trajectory to hit the x-axis
+# perpendicularly at `T/2`:
 # - `y(T/2) = 0`
 # - `vₓ(T/2) = 0`
 #
-# while solving for:
+# **Full-period periodicity** — require the trajectory to return to its
+# initial state after one full period:
+# - `x(T) - x(0) = 0`
+# - `vy(T) - vy(0) = 0`
 #
-# - `vᵧ(0)` (initial transverse velocity)
-# - `T/2` (the half-period)
-layout = ReducedLayout(
-	SingleShootingLayout(6), VarMap(7, [5, 7]), 
-	vcat(x0, T0/2)
+# Here we use the full-period constraint via `Continuation.Periodicity`:
+f(x, T, λ) = Motion.CR3BP.flow(μ, x, 0.0, T, Vern9(); abstol =  reltol=1e-14 );
+sr = SingleShootingResidual(
+	SingleShooting(f, layout), Continuation.Periodicity(layout),
 );
 
-# Create a shooting residual model
-flow = (x, T, λ) -> Motion.CR3BP.flow(μ, x, 0.0, T, Vern9(); abstol =  reltol=1e-12 );
-sys = SingleShootingResidual(
-	ShootingArc(flow, layout),
-	HalfPeriodSymmetry((2, 4)), # fix y(T/2) = vₓ(T/2) = 0
-)
+# ### Phase constraint
+#
+# With 3 unknowns (`x`, `vy`, `T`) and 2 periodicity constraints the system is
+# under-determined — one degree of freedom remains, corresponding to the **family
+# parameter** (amplitude). To pin a unique solution we add a **natural-parameter
+# constraint** that fixes `x` to its initial-guess value:
+r = NaturalParameterShootingResidual(sr, 1);
 
-# Solve for `z`
-zinit = [x0[5], T0/2]
-corr = Corrector(SimpleNewtonRaphson(); abstol =  reltol=1e-10 , verbose = true)
-zsol, stat = solve(sys, corr, zinit, 0.0)
+# ### Solve the corrector
+#
+# Pack the initial guess into the reduced vector `z₀ = [x, vy, T]` and
+# solve the resulting nonlinear system with Newton–Raphson:
+z0 = [x0[1], x0[5], T0]
+corr = Continuation.SciMLCorrector(SimpleNewtonRaphson(); abstol =  reltol=1e-10 , verbose = false);
+zsol, stat = solve(r, corr, z0, z0[1]);
 
-# We'll integrate the initial guess:
-sol_guess = Motion.CR3BP.build_solution(μ, x0, 0.0, T0, Vern9(); abstol =  reltol=1e-12 )
+# ## Plot the initial guess vs the corrected orbit
+
+# Integrate the linearized seed over one period:
+sol_guess = Motion.CR3BP.build_solution(μ, x0, 0.0, T0, Vern9(); abstol =  reltol=1e-14 );
 X_guess = reduce(hcat, sol_guess.(LinRange(0, T0, 1000)));
 
-# Integrate the corrected orbit:
-xn = [x0g[1], 0, 0, 0, zsol[1], 0]
-Tn = 2*zsol[2]
-sol = Motion.CR3BP.build_solution(μ, xn, 0.0, Tn, Vern9(); abstol =  reltol=1e-12 )
+# Integrate the corrected orbit over one period:
+xn, Tn = Continuation.unpack(layout, zsol)
+sol = Motion.CR3BP.build_solution(μ, xn, 0.0, Tn, Vern9(); abstol =  reltol=1e-14 )
 X = reduce(hcat, sol.(LinRange(0, Tn, 1000)));
 
-# Plot: initial guess vs corrected periodic orbit
+# The corrected orbit (black) closes on itself, while the linearized seed (red,
+# dotted) visibly drifts — demonstrating why the differential correction step
+# is essential.
 begin
 	p = plot(framestyle = :box, xlabel = "x (-)", ylabel = "y (-)", aspect_ratio = 1, legend = :bottomright)
 	scatter!(p, [xLP[1]], [xLP[2]], label = false, marker = :d, color = :red)
 	plot!(p, X_guess[1, :], X_guess[2, :], color = :red, style = :dot, label = "Initial guess")
 	plot!(p, X[1, :], X[2, :], color = :black, label = "Corrected orbit")
-	plot!(p, xlim = (0.65, 1.0), ylim = (-0.1, 0.1))
 end
+
+## hideall
+cache_path = joinpath(@__DIR__, "cache", "010_L1_Lyap_seed.jls")
+	mkpath(dirname(cache_path))
+	serialize(cache_path,
+		(; μ = μ, x = xn, T = Tn )
+	)
