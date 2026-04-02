@@ -9,7 +9,6 @@ makedocs(
 	modules = [
 		Motion,
 		Motion.CR3BP,
-		Motion.MultipleShooting,
 	],
 	sitename = "Motion.jl",
 	authors = "Andrea Pasquale <andrea.pasquale@outlook.it>",
