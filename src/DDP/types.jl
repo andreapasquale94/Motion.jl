@@ -103,6 +103,7 @@ end
 Algorithmic parameters for the constrained DDP solver.
 
 # Fields
+- `method`         – `:DDP` (full second-order) or `:iLQR` (Gauss-Newton, no dynamics Hessian)
 - `max_iter`       – maximum DDP iterations per augmented-Lagrangian outer loop
 - `max_outer`      – maximum augmented-Lagrangian outer iterations
 - `atol`           – absolute tolerance on cost improvement for convergence
@@ -120,6 +121,7 @@ Algorithmic parameters for the constrained DDP solver.
 - `verbose`        – print iteration info
 """
 @kwdef struct DDPOptions{T<:AbstractFloat}
+    method::Symbol      = :iLQR
     max_iter::Int       = 200
     max_outer::Int      = 20
     atol::T             = 1e-8

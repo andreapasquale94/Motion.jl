@@ -1,10 +1,14 @@
 # ──────────────────────────────────────────────────────────────────────
-#  Backward pass – Riccati-like sweep for constrained DDP (HDDP)
+#  Backward pass – Riccati-like sweep for constrained DDP / iLQR
 #
 #  Computes the quadratic value-function approximation
 #      V_k(δx) ≈ s_k + Sₓᵀδx + ½ δxᵀ Sₓₓ δx
 #  and the affine feedback gains
 #      δu* = l_k + L_k δx
+#
+#  Two methods:
+#    :iLQR – Gauss-Newton (first-order dynamics only)
+#    :DDP  – full second-order (includes dynamics Hessian tensor)
 #
 #  Handles path equality/inequality constraints via augmented
 #  Lagrangian terms and terminal equality constraints.
@@ -13,18 +17,21 @@
 # ──────────────────────────────────────────────────────────────────────
 
 """
-    backward_pass!(prob, X, U, t, λ_eq, λ_ineq, ν, μ, reg, opts)
+    backward_pass(prob, X, U, t, λ_eq, λ_ineq, ν, μ, reg, method)
 
 Perform the backward Riccati sweep.
 
+`method` is `:iLQR` (Gauss-Newton, no dynamics Hessian) or `:DDP`
+(full second-order with dynamics Hessian tensor contraction).
+
 Returns `(gains, ΔJ1, ΔJ2, ok)` where
-- `gains = [(l_k, L_k), …]` for k = 1,…,N-1
+- `gains = (gains_l, gains_L)` for k = 1,…,N-1
 - `ΔJ1, ΔJ2` are the expected cost reduction from the linear and
   quadratic model, used by the line-search
 - `ok` is false when `Quu` is not positive-definite (needs more regularisation)
 """
 function backward_pass(prob::DDPProblem, X, U, t,
-                       λ_eq, λ_ineq, ν, μ, reg)
+                       λ_eq, λ_ineq, ν, μ, reg, method::Symbol)
     nx, nu = prob.nx, prob.nu
     N = length(X)
     T = eltype(X[1])
@@ -65,13 +72,21 @@ function backward_pass(prob::DDPProblem, X, U, t,
         # Dynamics linearisation
         fx, fu = dynamics_derivatives(prob.dynamics, xk, uk, tk, tkp1)
 
-        # Q-function expansion (second-order DDP keeps dynamics curvature
-        # implicit through the value function Hessian)
+        # Q-function expansion (iLQR / Gauss-Newton terms)
         Qx  = ℓx  + fx' * Sx
         Qu  = ℓu  + fu' * Sx
         Qxx = ℓxx + fx' * Sxx * fx
         Quu = ℓuu + fu' * Sxx * fu
         Qux = ℓux + fu' * Sxx * fx
+
+        # Full DDP: add dynamics Hessian tensor terms  ∑ᵢ Vx[i] * fzz_i
+        if method === :DDP
+            Qxx_t, Quu_t, Qux_t = dynamics_hessians(
+                prob.dynamics, xk, uk, tk, tkp1, Sx)
+            Qxx = Qxx + Qxx_t
+            Quu = Quu + Quu_t
+            Qux = Qux + Qux_t
+        end
 
         # ── Path equality constraints ────────────────────────────────
         if prob.eq !== nothing
@@ -97,8 +112,6 @@ function backward_pass(prob::DDPProblem, X, U, t,
                 # Constraint is h_j ≥ 0.
                 # Active if h_j ≤ 0 or multiplier > 0 (complementarity)
                 if hval[j] <= zero(T) || λk_ineq[j] > zero(T)
-                    # Contribution: -λ_j h_j + (μ/2) h_j²
-                    # (sign: we want h ≥ 0, so penalty on violation -h)
                     hx_j = SVector{nx,T}(hx[j, :])
                     hu_j = SVector{nu,T}(hu[j, :])
                     Qx  = Qx  - λk_ineq[j] * hx_j - μ * hval[j] * hx_j

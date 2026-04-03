@@ -2,8 +2,6 @@
 #  Automatic-differentiation helpers for cost / dynamics / constraints
 # ──────────────────────────────────────────────────────────────────────
 
-using ForwardDiff
-
 # ── Stage cost derivatives ───────────────────────────────────────────
 
 """
@@ -56,6 +54,45 @@ function dynamics_derivatives(f, x::SVector{nx,T}, u::SVector{nu,T},
     fx = ForwardDiff.jacobian(w -> f(w, u, tk, tkp1), x)
     fu = ForwardDiff.jacobian(w -> f(x, w, tk, tkp1), u)
     return SMatrix{nx,nx,T}(fx), SMatrix{nx,nu,T}(fu)
+end
+
+"""
+    dynamics_hessians(f, x, u, tk, tkp1, Sx) -> (Qxx_tensor, Quu_tensor, Qux_tensor)
+
+Second-order dynamics correction terms for full DDP.  Given the value-function
+gradient `Sx = Vₓ(x_{k+1})`, compute the tensor contractions:
+
+    Qxx_tensor = ∑ᵢ Sx[i] * fxx_i
+    Quu_tensor = ∑ᵢ Sx[i] * fuu_i
+    Qux_tensor = ∑ᵢ Sx[i] * fux_i
+
+where `fxx_i`, `fuu_i`, `fux_i` are the Hessians of the i-th component of f
+w.r.t. (x,x), (u,u), and (u,x) respectively.
+"""
+function dynamics_hessians(f, x::SVector{nx,T}, u::SVector{nu,T},
+                           tk, tkp1, Sx::SVector{nx,T}) where {nx, nu, T}
+    # For each output component i, we need the Hessian of f_i w.r.t. z = [x; u]
+    nz = nx + nu
+    z  = vcat(x, u)
+
+    Qxx_t = zeros(SMatrix{nx,nx,T})
+    Quu_t = zeros(SMatrix{nu,nu,T})
+    Qux_t = zeros(SMatrix{nu,nx,T})
+
+    ix = SVector{nx,Int}(ntuple(identity, Val(nx)))
+    iu = SVector{nu,Int}(ntuple(i -> i + nx, Val(nu)))
+
+    # Scalar function for i-th component of dynamics
+    for i in 1:nx
+        fi(w) = f(SVector{nx}(w[ix]), SVector{nu}(w[iu]), tk, tkp1)[i]
+        Hi = SMatrix{nz,nz,T}(ForwardDiff.hessian(fi, z))
+
+        Qxx_t = Qxx_t + Sx[i] * Hi[ix, ix]
+        Quu_t = Quu_t + Sx[i] * Hi[iu, iu]
+        Qux_t = Qux_t + Sx[i] * Hi[iu, ix]
+    end
+
+    return Qxx_t, Quu_t, Qux_t
 end
 
 # ── Constraint derivatives ──────────────────────────────────────────

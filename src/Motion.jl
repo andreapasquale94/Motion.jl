@@ -24,5 +24,6 @@ include("CR3BP/CR3BP.jl")
 include("Continuation/Continuation.jl")
 include("MultipleShooting.jl")
 include("DDP/DDP.jl")
+include("PellegriniDDP/PellegriniDDP.jl")
 
 end

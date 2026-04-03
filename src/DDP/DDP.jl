@@ -19,6 +19,7 @@ module DDP
 
 using StaticArrays
 using LinearAlgebra
+using ForwardDiff
 
 export DDPProblem, DDPOptions, DDPSolution
 export EqualityConstraint, InequalityConstraint, TerminalConstraint

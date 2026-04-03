@@ -60,7 +60,7 @@ function solve(prob::DDPProblem, X0::Vector{SVector{nx,T}},
 
             # Backward pass
             result, ΔJ1, ΔJ2, ok = backward_pass(
-                prob, X, U, t, λ_eq, λ_ineq, ν, μ, reg)
+                prob, X, U, t, λ_eq, λ_ineq, ν, μ, reg, opts.method)
 
             if !ok
                 # Increase regularisation and retry
