@@ -23,5 +23,6 @@ include("CR3BP/CR3BP.jl")
 # Algorithms
 include("Continuation/Continuation.jl")
 include("MultipleShooting.jl")
+include("DDP/DDP.jl")
 
 end
