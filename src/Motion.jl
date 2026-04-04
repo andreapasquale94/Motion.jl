@@ -5,12 +5,13 @@ A multibody trajectory design toolkit for semi-analytical models used in
 mission analysis (CR3BP, BCR4BP, etc.).
 
 Provides dynamical models (`CR3BP`), continuation methods (`Continuation`),
-and trajectory optimisation algorithms (`MultipleShooting`, `DDP`, `MDDP`).
+and trajectory optimisation algorithms (`MultipleShooting`, `Collocation`, `DDP`, `MDDP`).
 
 # Submodules
 - `Motion.CR3BP`          – Circular Restricted Three-Body Problem dynamics
 - `Motion.Continuation`   – Numerical continuation (natural parameter, pseudo-arc-length)
 - `Motion.MultipleShooting` – Multiple-shooting transcription helpers
+- `Motion.Collocation`     – Hermite-Simpson direct collocation (with mesh refinement)
 - `Motion.DDP`            – Constrained Differential Dynamic Programming (iLQR/DDP)
 - `Motion.MDDP`           – Multiple-Shooting DDP (Pellegrini & Russell)
 """
@@ -43,6 +44,7 @@ include("dynamics/CR3BP/CR3BP.jl")
 
 include("Continuation/Continuation.jl")
 include("optim/MultipleShooting.jl")
+include("optim/Collocation/Collocation.jl")
 include("optim/DDP/DDP.jl")
 include("optim/MDDP/MDDP.jl")
 
