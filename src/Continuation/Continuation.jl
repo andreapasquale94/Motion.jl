@@ -28,4 +28,10 @@ include("shooting/natpar.jl")
 export PseudoArcLengthShootingResidual
 include("shooting/palc.jl")
 
+export BifurcationType, TANGENT, PERIOD_DOUBLING, PERIOD_TRIPLING
+export BifurcationDetector, BifurcationEvent, BifurcationPoint
+export critical_stability_index, period_multiple
+export detect_bifurcations, locate_bifurcation, exploit_bifurcation
+include("bifurcation.jl")
+
 end
