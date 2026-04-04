@@ -63,7 +63,10 @@ function solve(prob::DDPProblem, X0::Vector{SVector{nx,T}},
 
             if !ok
                 reg = _increase_reg(reg, opts)
-                reg > opts.reg_max && (@goto done; status = :regularisation_failure)
+                if reg > opts.reg_max
+                    status = :regularisation_failure
+                    @goto done
+                end
                 continue
             end
 
@@ -74,7 +77,10 @@ function solve(prob::DDPProblem, X0::Vector{SVector{nx,T}},
 
             if α == zero(T)
                 reg = _increase_reg(reg, opts)
-                reg > opts.reg_max && (@goto done; status = :line_search_failure)
+                if reg > opts.reg_max
+                    status = :line_search_failure
+                    @goto done
+                end
                 continue
             end
 
