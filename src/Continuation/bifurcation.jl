@@ -15,6 +15,7 @@ critical value of the Broucke stability index.
     TANGENT
     PERIOD_DOUBLING
     PERIOD_TRIPLING
+    PERIOD_QUADRUPLING
 end
 
 """
@@ -25,14 +26,16 @@ Critical value of the Broucke stability index for a given bifurcation.
 
 For a general period-`N` bifurcation the critical value is `2cos(2π/N)`.
 Special cases:
-- `TANGENT`         → `+2` (eigenvalue at +1, same-period family branches off)
-- `PERIOD_DOUBLING` → `-2` (eigenvalue at -1, double-period family)
-- `PERIOD_TRIPLING` → `-1` (eigenvalues at `exp(±2πi/3)`)
+- `TANGENT`            → `+2` (eigenvalue at +1, same-period family branches off)
+- `PERIOD_DOUBLING`    → `-2` (eigenvalue at -1, double-period family)
+- `PERIOD_TRIPLING`    → `-1` (eigenvalues at `exp(±2πi/3)`)
+- `PERIOD_QUADRUPLING` → ` 0` (eigenvalues at `±i`)
 """
 critical_stability_index(bt::BifurcationType) = _csi(Val(bt))
-_csi(::Val{TANGENT})         =  2.0
-_csi(::Val{PERIOD_DOUBLING}) = -2.0
-_csi(::Val{PERIOD_TRIPLING}) = -1.0
+_csi(::Val{TANGENT})            =  2.0
+_csi(::Val{PERIOD_DOUBLING})    = -2.0
+_csi(::Val{PERIOD_TRIPLING})    = -1.0
+_csi(::Val{PERIOD_QUADRUPLING}) =  0.0
 
 function critical_stability_index(N::Integer)
     N >= 1 || throw(ArgumentError("N must be ≥ 1, got $N"))
@@ -46,9 +49,10 @@ end
 Period multiplier of the family emerging from the bifurcation.
 """
 period_multiple(bt::BifurcationType) = _pm(Val(bt))
-_pm(::Val{TANGENT})         = 1
-_pm(::Val{PERIOD_DOUBLING}) = 2
-_pm(::Val{PERIOD_TRIPLING}) = 3
+_pm(::Val{TANGENT})            = 1
+_pm(::Val{PERIOD_DOUBLING})    = 2
+_pm(::Val{PERIOD_TRIPLING})    = 3
+_pm(::Val{PERIOD_QUADRUPLING}) = 4
 period_multiple(N::Integer) = Int(N)
 
 # ── Detector configuration ────────────────────────────────────────────
@@ -360,3 +364,134 @@ function _find_critical_eigenpair(M::AbstractMatrix, s_critical::Real)
     idx  = argmin(abs.(F.values .- target))
     return F.values[idx], F.vectors[:, idx]
 end
+
+# ══════════════════════════════════════════════════════════════════════
+#  Broucke stability diagram
+# ══════════════════════════════════════════════════════════════════════
+
+"""
+    BrouckeData{T}
+
+Data container for a Broucke stability diagram.
+
+A Broucke diagram plots the two Broucke stability indices ``(\\nu_1, \\nu_2)``
+as functions of a family parameter (e.g. Jacobi constant, continuation
+parameter, or orbit index).  Bifurcations occur whenever an index
+crosses a critical value.
+
+# Fields
+- `parameter::Vector{T}` – family parameter at each orbit (x-axis).
+- `p::Vector{T}`         – first  stability index at each orbit.
+- `q::Vector{T}`         – second stability index at each orbit.
+- `bifurcations::Vector{BifurcationEvent{T}}` – all detected events
+  (empty if no detectors were supplied).
+"""
+struct BrouckeData{T}
+    parameter::Vector{T}
+    p::Vector{T}
+    q::Vector{T}
+    bifurcations::Vector{BifurcationEvent{T}}
+end
+
+"""
+    broucke_diagram(family, monodromy_fn;
+                    parameter_fn = cp -> cp.λ,
+                    detectors = BifurcationDetector[]) -> BrouckeData
+
+Compute a Broucke stability diagram for a family of periodic orbits.
+
+# Arguments
+- `family`       – `Vector{ContinuationPoint{T}}`.
+- `monodromy_fn` – `(cp::ContinuationPoint) -> AbstractMatrix`.
+                   Returns the 6×6 monodromy matrix for a given orbit.
+
+# Keyword arguments
+- `parameter_fn` – `(cp::ContinuationPoint) -> Real`.  Maps each family
+                   member to the x-axis value.  Defaults to `cp.λ`
+                   (the continuation parameter).  Common choices:
+                   `cp -> cp.z[end]` (period) or a Jacobi-constant function.
+- `detectors`    – vector of [`BifurcationDetector`](@ref)s.  All matching
+                   crossings are stored in the returned [`BrouckeData`](@ref).
+
+# Example
+```julia
+# Compute diagram with automatic bifurcation scanning
+detectors = [
+    BifurcationDetector(TANGENT),
+    BifurcationDetector(PERIOD_DOUBLING),
+    BifurcationDetector(PERIOD_TRIPLING),
+    BifurcationDetector(PERIOD_QUADRUPLING),
+]
+bd = broucke_diagram(family, mono_fn; detectors = detectors)
+
+# Plot with your favourite backend
+using Plots
+plot(bd.parameter, bd.p; label="ν₁", xlabel="Jacobi constant", ylabel="stability index")
+plot!(bd.parameter, bd.q; label="ν₂")
+hline!([2, -2, -1, 0]; ls=:dash, c=:grey, label="")
+```
+"""
+function broucke_diagram(
+    family::AbstractVector{ContinuationPoint{T}},
+    monodromy_fn;
+    parameter_fn = cp -> cp.λ,
+    detectors::AbstractVector{BifurcationDetector} = BifurcationDetector[],
+) where {T}
+    n  = length(family)
+    pv = Vector{T}(undef, n)
+    qv = Vector{T}(undef, n)
+    xv = Vector{T}(undef, n)
+
+    for k in 1:n
+        cp = family[k]
+        M  = monodromy_fn(cp)
+        pk, qk = stability_index(M)
+        pv[k] = pk
+        qv[k] = qk
+        xv[k] = T(parameter_fn(cp))
+    end
+
+    si = collect(zip(pv, qv))
+    all_events = BifurcationEvent{T}[]
+    for det in detectors
+        append!(all_events, detect_bifurcations(si, det))
+    end
+    sort!(all_events; by = e -> e.index)
+
+    return BrouckeData{T}(xv, pv, qv, all_events)
+end
+
+"""
+    broucke_diagram(si::AbstractVector{<:Tuple{T,T}}, params::AbstractVector{T};
+                    detectors = BifurcationDetector[]) -> BrouckeData
+
+Build a [`BrouckeData`](@ref) directly from pre-computed stability indices
+and parameter values (useful when monodromy matrices have already been
+computed elsewhere).
+"""
+function broucke_diagram(
+    si::AbstractVector{<:Tuple{T,T}},
+    params::AbstractVector{T};
+    detectors::AbstractVector{BifurcationDetector} = BifurcationDetector[],
+) where {T}
+    length(si) == length(params) ||
+        throw(DimensionMismatch("si and params must have the same length"))
+
+    pv = [s[1] for s in si]
+    qv = [s[2] for s in si]
+
+    all_events = BifurcationEvent{T}[]
+    for det in detectors
+        append!(all_events, detect_bifurcations(si, det))
+    end
+    sort!(all_events; by = e -> e.index)
+
+    return BrouckeData{T}(Vector{T}(params), pv, qv, all_events)
+end
+
+const ALL_STANDARD_DETECTORS = [
+    BifurcationDetector(TANGENT),
+    BifurcationDetector(PERIOD_DOUBLING),
+    BifurcationDetector(PERIOD_TRIPLING),
+    BifurcationDetector(PERIOD_QUADRUPLING),
+]
