@@ -41,7 +41,7 @@ include("dynamics/CR3BP/CR3BP.jl")
 
 # ── Optimisation algorithms ─────────────────────────────────────────
 
-include("optim/Continuation/Continuation.jl")
+include("Continuation/Continuation.jl")
 include("optim/MultipleShooting.jl")
 include("optim/DDP/DDP.jl")
 include("optim/MDDP/MDDP.jl")
