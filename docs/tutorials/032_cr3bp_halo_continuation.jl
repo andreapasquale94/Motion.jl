@@ -46,7 +46,7 @@ layout = SingleShootingReducedLayout(6, [1, 3, 5], true);
 # - `y(T/2) = 0`   — returns to the xz-plane,
 # - `vₓ(T/2) = 0`  — perpendicular crossing (in-plane),
 # - `vz(T/2) = 0`  — perpendicular crossing (out-of-plane).
-f(x, T, λ) = Motion.CR3BP.flow(μ, x, 0.0, T, Vern9(); abstol =  reltol=1e-14 );
+f(x, T, λ) = Motion.CR3BP.flow(μ, x, 0.0, T, Vern9(); abstol=1e-14, reltol=1e-14 );
 sr = SingleShootingResidual(
 	SingleShooting(f, layout), Continuation.HalfPeriodSymmetry([2, 4, 6]),
 );
@@ -64,7 +64,7 @@ history = ContinuationPoint{Float64}[ContinuationPoint{Float64}(z0, 0.0),]
 prob = ContinuationProblem(
 	sr;
 	predictor = SimplePseudoArcLength(sr),
-	corrector = Continuation.SciMLCorrector(; abstol =  reltol=1e-10 ),
+	corrector = Continuation.SciMLCorrector(; abstol=1e-10, reltol=1e-10 ),
 )
 
 # ## Run the continuation
@@ -94,7 +94,7 @@ begin
 		xn, Tn = Continuation.unpack(layout, point.z)
 
 		sol = Motion.CR3BP.build_solution(
-			μ, xn, 0.0, 2Tn, Vern9(); abstol =  reltol = 1e-14 ,
+			μ, xn, 0.0, 2Tn, Vern9(); abstol=1e-14, reltol=1e-14 ,
 		)
 		X = reduce(hcat, sol.(LinRange(0, 2Tn, 1000)))
 

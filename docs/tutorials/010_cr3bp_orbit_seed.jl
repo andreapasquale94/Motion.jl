@@ -90,7 +90,7 @@ layout = SingleShootingReducedLayout(6, [1, 5], true);
 # - `vy(T) - vy(0) = 0`
 #
 # Here we use the full-period constraint via `Continuation.Periodicity`:
-f(x, T, λ) = Motion.CR3BP.flow(μ, x, 0.0, T, Vern9(); abstol =  reltol=1e-14 );
+f(x, T, λ) = Motion.CR3BP.flow(μ, x, 0.0, T, Vern9(); abstol=1e-14, reltol=1e-14 );
 sr = SingleShootingResidual(
 	SingleShooting(f, layout), Continuation.Periodicity(layout),
 );
@@ -108,18 +108,18 @@ r = NaturalParameterShootingResidual(sr, 1);
 # Pack the initial guess into the reduced vector `z₀ = [x, vy, T]` and
 # solve the resulting nonlinear system with Newton–Raphson:
 z0 = [x0[1], x0[5], T0]
-corr = Continuation.SciMLCorrector(; abstol =  reltol=1e-10 , verbose = false);
+corr = Continuation.SciMLCorrector(; abstol=1e-10, reltol=1e-10 , verbose = false);
 zsol, stat = solve(r, corr, z0, z0[1]);
 
 # ## Plot the initial guess vs the corrected orbit
 
 # Integrate the linearized seed over one period:
-sol_guess = Motion.CR3BP.build_solution(μ, x0, 0.0, T0, Vern9(); abstol =  reltol=1e-14 );
+sol_guess = Motion.CR3BP.build_solution(μ, x0, 0.0, T0, Vern9(); abstol=1e-14, reltol=1e-14 );
 X_guess = reduce(hcat, sol_guess.(LinRange(0, T0, 1000)));
 
 # Integrate the corrected orbit over one period:
 xn, Tn = Continuation.unpack(layout, zsol)
-sol = Motion.CR3BP.build_solution(μ, xn, 0.0, Tn, Vern9(); abstol =  reltol=1e-14 )
+sol = Motion.CR3BP.build_solution(μ, xn, 0.0, Tn, Vern9(); abstol=1e-14, reltol=1e-14 )
 X = reduce(hcat, sol.(LinRange(0, Tn, 1000)));
 
 cache_path = joinpath(@__DIR__, "cache", "010_L1_Lyap_seed.jls")

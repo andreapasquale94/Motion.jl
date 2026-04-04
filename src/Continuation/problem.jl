@@ -17,7 +17,7 @@ end
 
 function ContinuationProblem(r::AbstractResidual;
 	predictor::AbstractPredictor,
-	corrector::AbstractCorrector = SciMLCorrector(SimpleNewtonRaphson(), reltol =  abstol=1e-12 ))
+	corrector::AbstractCorrector = SciMLCorrector(SimpleNewtonRaphson(); reltol=1e-12, abstol=1e-12))
 	return ContinuationProblem{typeof(r), typeof(predictor), typeof(corrector)}(r, predictor, corrector)
 end
 
