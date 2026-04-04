@@ -61,8 +61,8 @@ end
 # full-period periodicity constraint supplies 3 equations — giving a square system
 # that can be solved directly without an additional phase constraint.
 
-f(x, T, λ) = Motion.CR3BP.flow(μ, x, 0.0, T, Vern9(); abstol =  reltol=1e-14 );
-corr = Continuation.SciMLCorrector(; abstol =  reltol=1e-12 , verbose = false);
+f(x, T, λ) = Motion.CR3BP.flow(μ, x, 0.0, T, Vern9(); abstol=1e-14, reltol=1e-14 );
+corr = Continuation.SciMLCorrector(; abstol=1e-12, reltol=1e-12 , verbose = false);
 
 resonant_orbits = Dict{Tuple{Int,Int}, NamedTuple{(:x, :T), Tuple{Vector{Float64}, Float64}}}()
 
@@ -98,7 +98,7 @@ begin
     for idx in sort(collect(keys(resonant_orbits)))
         orb = resonant_orbits[idx]
         sol = Motion.CR3BP.build_solution(
-            μ, orb.x, 0.0, orb.T, Vern9(); abstol =  reltol = 1e-14 ,
+            μ, orb.x, 0.0, orb.T, Vern9(); abstol=1e-14, reltol=1e-14 ,
         )
         Xr = reduce(hcat, sol.(LinRange(0, orb.T, 1000)))
         plot!(p, Xr[1, :], Xr[3, :], label = "$(idx[1]):$(idx[2])")

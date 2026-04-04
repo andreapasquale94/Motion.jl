@@ -1,21 +1,21 @@
 @inline function _compute_libration_point(μ::Number, ::Val{:L1}, tol = 1e-14)
 	f = (x, _) -> 1.0 - μ - x - (1-μ)/(1-x)^2 + μ/x^2
 	prob = IntervalNonlinearProblem(f, (0.0, 0.5))
-	sol = solve(prob, Ridder(); abstol =  reltol=tol )
+	sol = solve(prob, Ridder(); abstol=tol, reltol=tol)
 	return SVector{6, typeof(μ)}(1 - μ - sol.u, 0, 0, 0, 0, 0)
 end
 
 @inline function _compute_libration_point(μ::Number, ::Val{:L2}, tol = 1e-14)
 	f = (x, _) -> 1.0 - μ + x - (1-μ)/(1+x)^2 - μ/x^2
 	prob = IntervalNonlinearProblem(f, (0.0, 0.5))
-	sol = solve(prob, Ridder(); abstol =  reltol=tol )
+	sol = solve(prob, Ridder(); abstol=tol, reltol=tol)
 	return SVector{6, typeof(μ)}(1 - μ + sol.u, 0, 0, 0, 0, 0)
 end
 
 @inline function _compute_libration_point(μ::Number, ::Val{:L3}, tol = 1e-14)
 	f = (x, _) -> -μ - x + (1-μ)/x^2 - μ/(1+x)^2
 	prob = IntervalNonlinearProblem(f, (0.5, 1.5))
-	sol = solve(prob, Ridder(); abstol =  reltol=tol )
+	sol = solve(prob, Ridder(); abstol=tol, reltol=tol)
 	return SVector{6, typeof(μ)}(- μ - sol.u, 0, 0, 0, 0, 0)
 end
 

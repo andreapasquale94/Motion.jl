@@ -81,7 +81,7 @@ layout = SingleShootingReducedLayout(6, [1, 3, 5], true);
 
 z0 = [x0[1], x0[3], x0[5], T0]
 
-f(x, T, λ) = Motion.CR3BP.flow(μ, x, 0.0, T, Vern9(); abstol =  reltol=1e-14 );
+f(x, T, λ) = Motion.CR3BP.flow(μ, x, 0.0, T, Vern9(); abstol=1e-14, reltol=1e-14 );
 sr = SingleShootingResidual(
 	SingleShooting(f, layout), Continuation.Periodicity(layout),
 );
@@ -90,7 +90,7 @@ sr = SingleShootingResidual(
 r = NaturalParameterShootingResidual(sr, 2);
 
 # Solve the corrector:
-corr = Continuation.SciMLCorrector(; abstol =  reltol=1e-10 , verbose = false);
+corr = Continuation.SciMLCorrector(; abstol=1e-10, reltol=1e-10 , verbose = false);
 zsol, stat = solve(r, corr, z0, z0[2]);
 
 xn, Tn = Continuation.unpack(layout, zsol)
@@ -98,11 +98,11 @@ xn, Tn = Continuation.unpack(layout, zsol)
 # ## Plot the seed vs the corrected halo orbit
 
 # Integrate the initial seed:
-sol_guess = Motion.CR3BP.build_solution(μ, x0, 0.0, T0, Vern9(); abstol =  reltol=1e-14 );
+sol_guess = Motion.CR3BP.build_solution(μ, x0, 0.0, T0, Vern9(); abstol=1e-14, reltol=1e-14 );
 X_guess = reduce(hcat, sol_guess.(LinRange(0, T0, 1000)));
 
 # Integrate the corrected orbit:
-sol = Motion.CR3BP.build_solution(μ, xn, 0.0, Tn, Vern9(); abstol =  reltol=1e-14 )
+sol = Motion.CR3BP.build_solution(μ, xn, 0.0, Tn, Vern9(); abstol=1e-14, reltol=1e-14 )
 X_corr = reduce(hcat, sol.(LinRange(0, Tn, 1000)));
 
 begin

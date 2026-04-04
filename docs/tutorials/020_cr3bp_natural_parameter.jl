@@ -57,7 +57,7 @@ layout = SingleShootingReducedLayout(6, [1, 5], true);
 # - `vₓ(T/2) = 0`  — it crosses perpendicularly.
 #
 # This halves the integration time and often improves convergence.
-f(x, T, λ) = Motion.CR3BP.flow(μ, x, 0.0, T, Vern9(); abstol =  reltol=1e-14 );
+f(x, T, λ) = Motion.CR3BP.flow(μ, x, 0.0, T, Vern9(); abstol=1e-14, reltol=1e-14 );
 sr = SingleShootingResidual(
 	SingleShooting(f, layout), Continuation.HalfPeriodSymmetry([2, 4]),
 );
@@ -91,7 +91,7 @@ history = ContinuationPoint{Float64}[ContinuationPoint{Float64}(z0, z0[1]),]
 prob = ContinuationProblem(
 	sr;
 	predictor = SimpleNaturalParameter(1, -1),
-	corrector = Continuation.SciMLCorrector(; abstol =  reltol=1e-10 ),
+	corrector = Continuation.SciMLCorrector(; abstol=1e-10, reltol=1e-10 ),
 )
 
 # ## Run the continuation
@@ -118,7 +118,7 @@ begin
 		xn, Tn = Continuation.unpack(layout, point.z)
 
 		sol = Motion.CR3BP.build_solution(
-			μ, xn, 0.0, 2Tn, Vern9(); abstol =  reltol = 1e-14 ,
+			μ, xn, 0.0, 2Tn, Vern9(); abstol=1e-14, reltol=1e-14 ,
 		)
 		X = reduce(hcat, sol.(LinRange(0, 2Tn, 1000)))
 		plot!(p, X[1, :], X[2, :], color = :black, linewidth = 0.5, label = false)
