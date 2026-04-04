@@ -1,7 +1,7 @@
 """
-    PellegriniDDP
+    MDDP
 
-Multiple-Shooting Differential Dynamic Programming (MDDP) module
+Multiple-Shooting Differential Dynamic Programming module
 implementing the algorithm of Pellegrini & Russell.
 
 Decomposes the trajectory into multiple shooting legs, runs constrained
@@ -17,7 +17,7 @@ Dynamic Programming Algorithm", Acta Astronautica, 2020.
 - Re-exports from DDP: `EqualityConstraint`, `InequalityConstraint`,
   `TerminalConstraint`, `StageCost`, `TerminalCost`
 """
-module PellegriniDDP
+module MDDP
 
 using StaticArrays
 using LinearAlgebra

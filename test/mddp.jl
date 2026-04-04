@@ -1,7 +1,7 @@
 using Motion
 using Motion.DDP: StageCost, TerminalCost, TerminalConstraint,
                   InequalityConstraint, EqualityConstraint
-using Motion.PellegriniDDP
+using Motion.MDDP
 using LinearAlgebra
 using StaticArrays
 using Test
@@ -14,7 +14,7 @@ function double_integrator(x::SVector{2,T}, u::SVector{1,T}, tk, tkp1) where T
     return A * x + B * u
 end
 
-@testset "PellegriniDDP" verbose=true begin
+@testset "MDDP" verbose=true begin
 
     @testset "Single leg (M=1) – equivalent to standard DDP" begin
         stage = StageCost((x, u, t) -> 0.5 * u' * u)
@@ -29,7 +29,7 @@ end
         X0 = [SVector(0.0, 0.0) for _ in 1:N]
         U0 = [SVector(0.0) for _ in 1:(N-1)]
 
-        sol = PellegriniDDP.solve(prob, X0, U0, t, 1;
+        sol = MDDP.solve(prob, X0, U0, t, 1;
                         opts=MDDPOptions(verbose=false, max_outer=30,
                                          max_ddp_iter=50, ctol=1e-5,
                                          μ0=1.0, ϕ_μ=10.0))
@@ -52,7 +52,7 @@ end
         X0 = [SVector(0.0, 0.0) for _ in 1:N]
         U0 = [SVector(0.0) for _ in 1:(N-1)]
 
-        sol = PellegriniDDP.solve(prob, X0, U0, t, 2;
+        sol = MDDP.solve(prob, X0, U0, t, 2;
                         opts=MDDPOptions(verbose=false, max_outer=40,
                                          max_ddp_iter=50, max_node_iter=10,
                                          ctol=1e-4, dtol=1e-4,
@@ -80,7 +80,7 @@ end
         X0 = [SVector(0.0, 0.0) for _ in 1:N]
         U0 = [SVector(0.0) for _ in 1:(N-1)]
 
-        sol = PellegriniDDP.solve(prob, X0, U0, t, 3;
+        sol = MDDP.solve(prob, X0, U0, t, 3;
                         opts=MDDPOptions(verbose=false, max_outer=50,
                                          max_ddp_iter=80, max_node_iter=15,
                                          ctol=1e-3, dtol=1e-3,
@@ -109,7 +109,7 @@ end
         X = [SVector(0.0, 0.0), SVector(1.0, 0.0)]
         U = [SVector(0.5)]
         t = [0.0, 1.0]
-        leg = PellegriniDDP.Leg(X, U, t)
+        leg = MDDP.Leg(X, U, t)
         @test length(leg.X) == 2
         @test length(leg.U) == 1
     end
@@ -120,12 +120,10 @@ end
         U0 = [SVector(0.0) for _ in 1:(N-1)]
         t  = collect(range(0.0, step=0.1, length=N))
 
-        legs = PellegriniDDP._split_into_legs(X0, U0, t, 2)
+        legs = MDDP._split_into_legs(X0, U0, t, 2)
         @test length(legs) == 2
-        # Should cover full trajectory
         @test legs[1].t[1] == t[1]
         @test legs[2].t[end] == t[end]
-        # Total nodes should equal N (with overlap at boundary)
         @test length(legs[1].X) + length(legs[2].X) - 1 ≥ N - 1
     end
 
