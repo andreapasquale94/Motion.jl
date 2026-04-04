@@ -70,7 +70,7 @@ end
 
 # ── Time-vector builder (generated for zero-allocation) ────────────
 
-@generated function __build_time_vector(::Val{N}, t0::T, dt) where {N, T}
+@generated function __build_time_vector(::Val{N}, t0::T, dt::SVector{Nm1, T}) where {N, T, Nm1}
     if N == 1
         return :(SVector{1, T}(t0))
     end

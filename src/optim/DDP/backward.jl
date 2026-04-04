@@ -56,13 +56,13 @@ function backward_pass(prob::DDPProblem, X, U, t,
 
         # Regularise and factorise
         Quu_reg = Quu + reg * SMatrix{nu,nu,T}(I)
-        if !isposdef(Symmetric(Matrix(Quu_reg)))
+        C = cholesky(Symmetric(Matrix(Quu_reg)); check=false)
+        if !issuccess(C)
             return nothing, zero(T), zero(T), false
         end
 
-        Quu_inv = inv(Quu_reg)
-        l_k = -Quu_inv * Qu
-        L_k = -Quu_inv * Qux
+        l_k = -(Quu_reg \ Qu)
+        L_k = -(Quu_reg \ Qux)
         gains_l[k] = l_k
         gains_L[k] = L_k
 

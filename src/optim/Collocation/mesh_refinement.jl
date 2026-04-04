@@ -102,9 +102,9 @@ function refine_mesh(
     N = length(X)
     errors = mesh_error(X, U, t, dynamics)
 
-    X_new = SVector{nx, T}[X[1]]
-    U_new = SVector{nu, T}[U[1]]
-    t_new = T[t[1]]
+    X_new = SVector{nx, T}[X[1]]; sizehint!(X_new, 2N)
+    U_new = SVector{nu, T}[U[1]]; sizehint!(U_new, 2N)
+    t_new = T[t[1]];              sizehint!(t_new, 2N)
 
     for k in 1:(N - 1)
         if errors[k] > tol

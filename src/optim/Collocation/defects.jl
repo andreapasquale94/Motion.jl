@@ -43,10 +43,10 @@ function defects(
 
     blocks = ntuple(Val(N - 1)) do k
         @inbounds begin
-            xk   = SVector{nx, T}(X[:, k])
-            xkp1 = SVector{nx, T}(X[:, k + 1])
-            uk   = SVector{nu, T}(U[:, k])
-            ukp1 = SVector{nu, T}(U[:, k + 1])
+            xk   = X[:, k]
+            xkp1 = X[:, k + 1]
+            uk   = U[:, k]
+            ukp1 = U[:, k + 1]
             hk   = dt[k]
             tm   = t[k] + hk / 2
 
@@ -84,12 +84,12 @@ function defects(
 
     blocks = ntuple(Val(N - 1)) do k
         @inbounds begin
-            xk   = SVector{nx, T}(X[:, k])
-            xkp1 = SVector{nx, T}(X[:, k + 1])
-            uk   = SVector{nu, T}(U[:, k])
-            ukp1 = SVector{nu, T}(U[:, k + 1])
-            xm   = SVector{nx, T}(Xm[:, k])
-            um   = SVector{nu, T}(Um[:, k])
+            xk   = X[:, k]
+            xkp1 = X[:, k + 1]
+            uk   = U[:, k]
+            ukp1 = U[:, k + 1]
+            xm   = Xm[:, k]
+            um   = Um[:, k]
             hk   = dt[k]
             tm   = t[k] + hk / 2
 

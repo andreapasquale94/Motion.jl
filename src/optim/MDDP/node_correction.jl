@@ -96,41 +96,44 @@ function node_correction!(legs::Vector{<:Leg}, Vx0s, Vxx0s,
     H = zeros(T, n_total, n_total)
     g = zeros(T, n_total)
 
+    Inx = Matrix{T}(LinearAlgebra.I, nx, nx)
+
     for m in 1:n_nodes
         # Block indices for node m+1 (legs[m+1])
-        i1 = (m - 1) * nx + 1
-        i2 = m * nx
+        ri = ((m - 1) * nx + 1):(m * nx)
 
         # Value function Hessian + gradient from leg m+1
-        H[i1:i2, i1:i2] += Matrix(Vxx0s[m+1])
-        g[i1:i2] += Vector(Vx0s[m+1])
+        @views H[ri, ri] .+= Vxx0s[m+1]
+        @views g[ri]     .+= Vx0s[m+1]
 
         # Defect penalty: (μ/2) ‖dₘ + δxₘ₊₁ - Φₘ δxₘ‖²
-        Φm = Matrix(STMs[m])
-        dm = Vector(defects_vec[m])
+        Φm = STMs[m]
+        dm  = defects_vec[m]
 
         # ∂²/∂δxₘ₊₁² contribution
-        H[i1:i2, i1:i2] += μ_defect * I(nx)
+        @views H[ri, ri] .+= μ_defect .* Inx
 
         if m > 1
-            j1 = (m - 2) * nx + 1
-            j2 = (m - 1) * nx
+            rj = ((m - 2) * nx + 1):((m - 1) * nx)
+            ΦmM = Matrix(Φm)  # dense for block multiply into H
             # ∂²/∂δxₘ² from Φₘᵀ Φₘ
-            H[j1:j2, j1:j2] += μ_defect * Φm' * Φm
+            @views H[rj, rj] .+= μ_defect .* (ΦmM' * ΦmM)
             # Cross terms
-            H[i1:i2, j1:j2] += -μ_defect * Φm'
-            H[j1:j2, i1:i2] += -μ_defect * Φm
+            @views H[ri, rj] .+= -μ_defect .* ΦmM'
+            @views H[rj, ri] .+= -μ_defect .* ΦmM
             # Gradient w.r.t. δxₘ from defect m
-            g[j1:j2] += -μ_defect * Φm' * dm
+            @views g[rj] .+= -μ_defect .* (Φm' * dm)
         end
 
         # Gradient w.r.t. δxₘ₊₁ from defect m
-        g[i1:i2] += μ_defect * dm
+        @views g[ri] .+= μ_defect .* dm
     end
 
     # Regularise and solve
-    H_reg = H + T(1e-8) * I(n_total)
-    δx_all = -H_reg \ g
+    for i in 1:n_total
+        H[i, i] += T(1e-8)
+    end
+    δx_all = -(H \ g)
 
     # ── Apply corrections and re-propagate ──────────────────────────
     for m in 1:n_nodes

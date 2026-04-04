@@ -79,9 +79,9 @@ function dynamics_hessians(f, x::SVector{nx,T}, u::SVector{nu,T},
     ix = _ix(Val(nx))
     iu = _iu(Val(nx), Val(nu))
 
-    Qxx_t = zeros(SMatrix{nx,nx,T})
-    Quu_t = zeros(SMatrix{nu,nu,T})
-    Qux_t = zeros(SMatrix{nu,nx,T})
+    Qxx_t = zero(SMatrix{nx,nx,T})
+    Quu_t = zero(SMatrix{nu,nu,T})
+    Qux_t = zero(SMatrix{nu,nx,T})
 
     for i in 1:nx
         fi(w) = f(SVector{nx}(w[ix]), SVector{nu}(w[iu]), tk, tkp1)[i]

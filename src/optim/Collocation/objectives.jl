@@ -29,8 +29,8 @@ function objective(
     ε = T(1e-16)
     J = zero(T)
     @inbounds for k in 1:(N - 1)
-        uk   = SVector{nu, T}(U[:, k])
-        ukp1 = SVector{nu, T}(U[:, k + 1])
+        uk   = U[:, k]
+        ukp1 = U[:, k + 1]
         um   = (uk + ukp1) / 2
         Lk   = sqrt(sum(abs2, uk)   + ε)
         Lm   = sqrt(sum(abs2, um)   + ε)
@@ -55,8 +55,8 @@ function objective(
     _, dt, _, U, _ = variables(vars, vN, vnx, vnu)
     J = zero(T)
     @inbounds for k in 1:(N - 1)
-        uk   = SVector{nu, T}(U[:, k])
-        ukp1 = SVector{nu, T}(U[:, k + 1])
+        uk   = U[:, k]
+        ukp1 = U[:, k + 1]
         um   = (uk + ukp1) / 2
         J += (dt[k] / 6) * (sum(abs2, uk) + 4 * sum(abs2, um) + sum(abs2, ukp1))
     end
@@ -94,9 +94,9 @@ function objective_separated(
     ε = T(1e-16)
     J = zero(T)
     @inbounds for k in 1:(N - 1)
-        uk   = SVector{nu, T}(U[:, k])
-        ukp1 = SVector{nu, T}(U[:, k + 1])
-        um   = SVector{nu, T}(Um[:, k])
+        uk   = U[:, k]
+        ukp1 = U[:, k + 1]
+        um   = Um[:, k]
         Lk   = sqrt(sum(abs2, uk)   + ε)
         Lm   = sqrt(sum(abs2, um)   + ε)
         Lkp1 = sqrt(sum(abs2, ukp1) + ε)
@@ -118,9 +118,9 @@ function objective_separated(
     _, dt, _, U, _, Um, _ = variables_separated(vars, vN, vnx, vnu)
     J = zero(T)
     @inbounds for k in 1:(N - 1)
-        uk   = SVector{nu, T}(U[:, k])
-        ukp1 = SVector{nu, T}(U[:, k + 1])
-        um   = SVector{nu, T}(Um[:, k])
+        uk   = U[:, k]
+        ukp1 = U[:, k + 1]
+        um   = Um[:, k]
         J += (dt[k] / 6) * (sum(abs2, uk) + 4 * sum(abs2, um) + sum(abs2, ukp1))
     end
     return J

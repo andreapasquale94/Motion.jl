@@ -93,8 +93,8 @@ function _leg_backward(prob, X, U, t, λ_eq_leg, λ_ineq_leg,
     if is_last_leg
         Sx, Sxx = _terminal_init(prob, X[N], ν, μ)
     else
-        Sx  = zeros(SVector{nx,T})
-        Sxx = zeros(SMatrix{nx,nx,T})
+        Sx  = zero(SVector{nx,T})
+        Sxx = zero(SMatrix{nx,nx,T})
     end
 
     gains_l = Vector{SVector{nu,T}}(undef, N - 1)
@@ -121,13 +121,13 @@ function _leg_backward(prob, X, U, t, λ_eq_leg, λ_ineq_leg,
 
         # Regularise and factorise
         Quu_reg = Quu + reg * SMatrix{nu,nu,T}(I)
-        if !isposdef(Symmetric(Matrix(Quu_reg)))
+        C = cholesky(Symmetric(Matrix(Quu_reg)); check=false)
+        if !issuccess(C)
             return nothing
         end
 
-        Quu_inv = inv(Quu_reg)
-        l_k = -Quu_inv * Qu
-        L_k = -Quu_inv * Qux
+        l_k = -(Quu_reg \ Qu)
+        L_k = -(Quu_reg \ Qux)
 
         gains_l[k] = l_k
         gains_L[k] = L_k
@@ -256,8 +256,8 @@ function _leg_value_gradient(prob, X, U, t, λ_eq_leg, λ_ineq_leg,
     if is_last_leg
         Sx, Sxx = _terminal_init(prob, X[N], ν, μ)
     else
-        Sx  = zeros(SVector{nx,T})
-        Sxx = zeros(SMatrix{nx,nx,T})
+        Sx  = zero(SVector{nx,T})
+        Sxx = zero(SMatrix{nx,nx,T})
     end
 
     for k in (N-1):-1:1
@@ -278,9 +278,8 @@ function _leg_value_gradient(prob, X, U, t, λ_eq_leg, λ_ineq_leg,
 
         # Small regularisation for numerical stability
         Quu_reg = Quu + T(1e-8) * SMatrix{nu,nu,T}(I)
-        Quu_inv = inv(Quu_reg)
-        L_k = -Quu_inv * Qux
-        l_k = -Quu_inv * Qu
+        l_k = -(Quu_reg \ Qu)
+        L_k = -(Quu_reg \ Qux)
 
         Sx  = Qx  + L_k' * Quu * l_k + L_k' * Qu + Qux' * l_k
         Sxx = Qxx + L_k' * Quu * L_k + L_k' * Qux + Qux' * L_k

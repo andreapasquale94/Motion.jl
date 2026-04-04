@@ -33,8 +33,9 @@ Add augmented-Lagrangian terms for path inequality constraints
 (violated or positive multiplier) contribute.
 """
 function augment_Q_inequality(Qx, Qu, Qxx, Quu, Qux,
-                              ineq::InequalityConstraint, x, u, t, λk, μ)
-    nx = length(x); nu = length(u)
+                              ineq::InequalityConstraint,
+                              x::SVector{nx}, u::SVector{nu},
+                              t, λk, μ) where {nx, nu}
     q = ineq.q
     T = eltype(x)
     hval, hx, hu = constraint_derivatives(ineq.h, x, u, t, Val(q))
@@ -42,8 +43,8 @@ function augment_Q_inequality(Qx, Qu, Qxx, Quu, Qux,
 
     for j in 1:q
         if hval[j] <= zero(T) || λ_ineq[j] > zero(T)
-            hx_j = SVector{nx,T}(hx[j, :])
-            hu_j = SVector{nu,T}(hu[j, :])
+            hx_j = hx[j, :]
+            hu_j = hu[j, :]
             Qx  = Qx  - λ_ineq[j] * hx_j - μ * hval[j] * hx_j
             Qu  = Qu  - λ_ineq[j] * hu_j - μ * hval[j] * hu_j
             Qxx = Qxx + μ * hx_j * hx_j'
