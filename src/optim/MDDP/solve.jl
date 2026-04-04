@@ -3,13 +3,11 @@
 #
 #  Three nested loops:
 #    1. Outer AL loop: update Lagrange multipliers and penalty μ
-#    2. Node correction loop: update shooting-node initial conditions
+#    2. Node correction loop: Newton step on shooting-node states
 #    3. Inner DDP loop (per leg): optimise controls on each leg
 #
 #  Reference: Pellegrini & Russell, Acta Astronautica 2020, §5.
 # ──────────────────────────────────────────────────────────────────────
-
-using ..DDP: EqualityConstraint, InequalityConstraint, TerminalConstraint
 
 """
     solve(prob::MDDPProblem, X0, U0, t, M; opts=MDDPOptions()) -> MDDPSolution
@@ -17,19 +15,27 @@ using ..DDP: EqualityConstraint, InequalityConstraint, TerminalConstraint
 Solve a constrained optimal-control problem with multiple-shooting DDP.
 
 # Arguments
-- `prob`  – problem definition
-- `X0`    – initial state trajectory guess (Vector of SVectors, length N)
-- `U0`    – initial control guess (Vector of SVectors, length N-1)
-- `t`     – node times (Vector, length N)
+- `prob`  – [`MDDPProblem`](@ref) specification
+- `X0`    – initial state trajectory guess (`Vector` of `SVector`, length `N`)
+- `U0`    – initial control guess (`Vector` of `SVector`, length `N-1`)
+- `t`     – node times (`Vector`, length `N`)
 - `M`     – number of multiple-shooting legs
-- `opts`  – algorithmic options
+- `opts`  – [`MDDPOptions`](@ref)
 
 The trajectory is split into `M` approximately equal legs.  The initial
-state of each leg is a decision variable; continuity between legs is
-enforced via the node-correction step.
+state of each leg (except the first, which is fixed) is a decision
+variable; continuity between legs is enforced via the node-correction
+step using value-function sensitivities and state-transition matrices.
 
 # Returns
 A [`MDDPSolution`](@ref) containing the optimised trajectory.
+
+# Algorithm outline
+1. Split trajectory into `M` legs
+2. **Outer loop** (augmented-Lagrangian):
+   a. Run DDP on each leg independently
+   b. Correct shooting-node states via Newton step
+   c. Update multipliers; increase penalty if needed
 """
 function solve(prob::MDDPProblem, X0::Vector{SVector{nx,T}},
                U0::Vector{SVector{nu,T}},
@@ -46,12 +52,12 @@ function solve(prob::MDDPProblem, X0::Vector{SVector{nx,T}},
     # ── Split into legs ─────────────────────────────────────────────
     legs = _split_into_legs(X0, U0, t, M)
 
-    # ── Initialise multipliers (per-leg, per-node) ──────────────────
-    λ_eq_legs   = [_init_leg_multipliers(prob.eq,   length(leg.X), T)
+    # ── Initialise multipliers (per-leg, using shared helpers) ──────
+    λ_eq_legs   = [init_path_multipliers(prob.eq, length(leg.X), T)
                    for leg in legs]
-    λ_ineq_legs = [_init_leg_multipliers(prob.ineq, length(leg.X), T)
+    λ_ineq_legs = [init_path_multipliers(prob.ineq, length(leg.X), T)
                    for leg in legs]
-    ν = _init_terminal_mult(prob.terminal_eq, T)
+    ν = init_terminal_multipliers(prob.terminal_eq, T)
 
     μ = opts.μ0
     total_iters = 0
@@ -72,7 +78,6 @@ function solve(prob::MDDPProblem, X0::Vector{SVector{nx,T}},
                                   μ, opts, is_last, ν)
             Vx0s[m] = Vx0
 
-            # Also get Vxx0 for node correction
             _, Vxx0 = _leg_value_gradient(
                 prob, legs[m].X, legs[m].U, legs[m].t,
                 λ_eq_legs[m], λ_ineq_legs[m], μ, opts.method, is_last, ν)
@@ -82,14 +87,10 @@ function solve(prob::MDDPProblem, X0::Vector{SVector{nx,T}},
 
         # ── Node correction iterations ──────────────────────────────
         d_max = max_defect(legs)
-        if opts.verbose
-            @info "MDDP" outer d_max J_total μ
-        end
+        opts.verbose && @info "MDDP" outer d_max J_total μ
 
         for node_iter in 1:opts.max_node_iter
-            if d_max < opts.dtol
-                break
-            end
+            d_max < opts.dtol && break
 
             node_correction!(legs, Vx0s, Vxx0s, prob, μ)
             d_max = max_defect(legs)
@@ -107,15 +108,12 @@ function solve(prob::MDDPProblem, X0::Vector{SVector{nx,T}},
             end
 
             d_max = max_defect(legs)
-            if opts.verbose
-                @info "  Node correction" node_iter d_max
-            end
+            opts.verbose && @info "  Node correction" node_iter d_max
         end
 
         # ── Multiplier update & constraint check ────────────────────
         c_viol = _update_leg_multipliers!(prob, legs, λ_eq_legs, λ_ineq_legs, ν, μ)
 
-        # Combined convergence: constraints + defects
         if c_viol < opts.ctol && d_max < opts.dtol
             status = :converged
             break
@@ -128,7 +126,6 @@ function solve(prob::MDDPProblem, X0::Vector{SVector{nx,T}},
     X_full, U_full, t_full = _assemble_solution(legs)
     J_pure = _total_pure_cost(prob, legs)
 
-    # Flatten per-leg multipliers
     λ_eq_flat   = reduce(vcat, λ_eq_legs)
     λ_ineq_flat = reduce(vcat, λ_ineq_legs)
 
@@ -144,27 +141,21 @@ end
 """
     _split_into_legs(X0, U0, t, M) -> Vector{Leg}
 
-Split a trajectory into M approximately equal legs.
+Split a trajectory of `N` nodes into `M` approximately equal legs.
+Each leg owns a contiguous slice of the state/control/time arrays.
 """
 function _split_into_legs(X0, U0, t, M)
     N = length(X0)
-    T = eltype(X0[1])
     SX = eltype(X0)
     SU = eltype(U0)
 
-    # Compute split points (N-1 segments split into M legs)
     n_seg = N - 1
     legs = Vector{Leg{eltype(t), SX, SU}}(undef, M)
 
     for m in 1:M
         k_start = div((m - 1) * n_seg, M) + 1
         k_end   = div(m * n_seg, M) + 1
-
-        legs[m] = Leg(
-            X0[k_start:k_end],
-            U0[k_start:k_end-1],
-            t[k_start:k_end]
-        )
+        legs[m] = Leg(X0[k_start:k_end], U0[k_start:k_end-1], t[k_start:k_end])
     end
 
     return legs
@@ -173,7 +164,8 @@ end
 """
     _assemble_solution(legs) -> (X, U, t)
 
-Reassemble the full trajectory from legs, removing duplicate boundary nodes.
+Reassemble the full trajectory from legs, removing duplicate boundary
+nodes between consecutive legs.
 """
 function _assemble_solution(legs)
     M = length(legs)
@@ -182,7 +174,6 @@ function _assemble_solution(legs)
     t = copy(legs[1].t)
 
     for m in 2:M
-        # Skip the first node of subsequent legs (it overlaps with previous leg's last)
         append!(X, legs[m].X[2:end])
         append!(U, legs[m].U)
         append!(t, legs[m].t[2:end])
@@ -191,26 +182,12 @@ function _assemble_solution(legs)
     return X, U, t
 end
 
-function _init_leg_multipliers(::Nothing, N, ::Type{T}) where T
-    return [T[] for _ in 1:(N-1)]
-end
+"""
+    _update_leg_multipliers!(prob, legs, λ_eq_legs, λ_ineq_legs, ν, μ) -> c_viol
 
-function _init_leg_multipliers(c::EqualityConstraint, N, ::Type{T}) where T
-    return [zeros(T, c.p) for _ in 1:(N-1)]
-end
-
-function _init_leg_multipliers(c::InequalityConstraint, N, ::Type{T}) where T
-    return [zeros(T, c.q) for _ in 1:(N-1)]
-end
-
-function _init_terminal_mult(::Nothing, ::Type{T}) where T
-    return T[]
-end
-
-function _init_terminal_mult(c::TerminalConstraint, ::Type{T}) where T
-    return zeros(T, c.r)
-end
-
+Hestenes-Powell multiplier update across all legs.  Returns the
+maximum constraint violation.
+"""
 function _update_leg_multipliers!(prob, legs, λ_eq_legs, λ_ineq_legs, ν, μ)
     T = eltype(legs[1].X[1])
     c_viol = zero(T)
@@ -242,7 +219,7 @@ function _update_leg_multipliers!(prob, legs, λ_eq_legs, λ_ineq_legs, ν, μ)
         end
     end
 
-    # Terminal
+    # Terminal constraints (last leg only)
     if prob.terminal_eq !== nothing
         X_last = legs[end].X
         ψval = prob.terminal_eq.ψ(X_last[end])
@@ -255,12 +232,16 @@ function _update_leg_multipliers!(prob, legs, λ_eq_legs, λ_ineq_legs, ν, μ)
     return c_viol
 end
 
+"""
+    _total_pure_cost(prob, legs)
+
+Sum of un-augmented costs across all legs.
+"""
 function _total_pure_cost(prob, legs)
     T = eltype(legs[1].X[1])
     J = zero(T)
     for m in eachindex(legs)
-        is_last = (m == length(legs))
-        J += _leg_pure_cost(prob, legs[m].X, legs[m].U, legs[m].t, is_last)
+        J += _leg_pure_cost(prob, legs[m].X, legs[m].U, legs[m].t, m == length(legs))
     end
     return J
 end
